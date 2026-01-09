@@ -9,19 +9,12 @@ export default {
       "Access-Control-Allow-Origin": "*",
     };
 
-    if (!id || !apiKey) {
-      return new Response(JSON.stringify({ error: 'Missing ID/KEY' }), { status: 400, headers });
-    }
-
     try {
       // Fetch Torn Basic Data
-      const tornUrl = `https://api.torn.com/faction/${id}?selections=basic&key=${apiKey}`;
-      const tornRes = await fetch(tornUrl).then(r => r.json());
+      const tornRes = await fetch(`https://api.torn.com/faction/${id}?selections=basic&key=${apiKey}`).then(r => r.json());
 
-      // Fetch Torn Stats (Corrected endpoint for the "1." version)
-      // Note: Torn Stats v2 often requires the faction ID in the URL path
-      const tsUrl = `https://www.tornstats.com/api/v2/${apiKey}/faction/members/${id}`;
-      const tsRes = await fetch(tsUrl).then(r => r.json()).catch(() => ({members: {}}));
+      // Fetch Torn Stats - Using the specific v2 stats endpoint
+      const tsRes = await fetch(`https://www.tornstats.com/api/v2/${apiKey}/faction/members`).then(r => r.json());
 
       return new Response(JSON.stringify({ 
         torn: tornRes, 
@@ -29,7 +22,7 @@ export default {
       }), { headers });
 
     } catch (e) {
-      return new Response(JSON.stringify({ error: "Worker Logic Error" }), { status: 500, headers });
+      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
     }
   }
 };
