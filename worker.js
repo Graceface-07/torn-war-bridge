@@ -9,18 +9,18 @@ export default {
       "Access-Control-Allow-Origin": "*",
     };
 
+    if (!id || !apiKey) {
+      return new Response(JSON.stringify({ error: 'Missing ID or API_KEY' }), { status: 400, headers });
+    }
+
     try {
-      // Fetch Torn Basic Data
-      const tornRes = await fetch(`https://api.torn.com/faction/${id}?selections=basic&key=${apiKey}`).then(r => r.json());
+      // Parallel fetch for speed
+      const [tornRes, tsRes] = await Promise.all([
+        fetch(`https://api.torn.com/faction/${id}?selections=basic&key=${apiKey}`).then(r => r.json()),
+        fetch(`https://www.tornstats.com/api/v2/${apiKey}/faction/members`).then(r => r.json())
+      ]);
 
-      // Fetch Torn Stats - Using the specific v2 stats endpoint
-      const tsRes = await fetch(`https://www.tornstats.com/api/v2/${apiKey}/faction/members`).then(r => r.json());
-
-      return new Response(JSON.stringify({ 
-        torn: tornRes, 
-        ts: tsRes 
-      }), { headers });
-
+      return new Response(JSON.stringify({ torn: tornRes, ts: tsRes }), { headers });
     } catch (e) {
       return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
     }
