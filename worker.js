@@ -35,20 +35,21 @@ export default {
     }
   }
 };
-// worker.js update
+// worker.js - DATA MAPPING AUDIT
 const tsRes = await fetch('https://www.tornstats.com/api/v2/' + tsKey + '/spy/faction/' + id).then(r => r.json());
 
-// Structural Analysis of Torn Stats Spy Return
-if (tsRes.status && tsRes.faction && tsRes.faction.members) {
-    Object.keys(tsRes.faction.members).forEach(uid => {
-        const spy = tsRes.faction.members[uid];
+const mergedStats = {};
+// AUDIT: Torn Stats uses .faction.members for this endpoint
+if (tsRes && tsRes.faction && tsRes.faction.members) {
+    const spyData = tsRes.faction.members;
+    Object.keys(spyData).forEach(uid => {
         mergedStats[uid] = {
-            strength: spy.strength || 0,
-            defense: spy.defense || 0,
-            speed: spy.speed || 0,
-            dexterity: spy.dexterity || 0,
-            total: spy.total || 0,
-            timestamp: spy.timestamp || 0
+            total: spyData[uid].total || 0,
+            strength: spyData[uid].strength || 0,
+            defense: spyData[uid].defense || 0,
+            speed: spyData[uid].speed || 0,
+            dexterity: spyData[uid].dexterity || 0,
+            timestamp: spyData[uid].timestamp || 0
         };
     });
 }
