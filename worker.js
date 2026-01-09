@@ -1,55 +1,106 @@
+/**
+ * TO INSTALL DEPENDENCY: 
+ * Run 'npm install tweetnacl' in your terminal before deploying.
+ */
+import nacl from 'tweetnacl';
+
 export default {
   async fetch(request, env) {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    const apiKey = env.API_KEY;
+    const url = new URL(request.url);
 
-    const headers = {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-    };
-
-    try {
-      // 1. Fetch Torn Data
-      const tornResponse = await fetch('https://api.torn.com/faction/' + id + '?selections=basic&key=' + apiKey);
-      if (!tornResponse.ok) return new Response(JSON.stringify({ error: "Torn API Down" }), { status: 502, headers });
-      const tornRes = await tornResponse.json();
-
-      // 2. Fetch YATA Data
-      const yataResponse = await fetch('https://yata.yt/api/v1/factions/' + id + '/?key=' + apiKey);
-      
-      let yataMembers = {};
-      // Check if YATA returned valid JSON instead of an HTML error page
-      if (yataResponse.ok && yataResponse.headers.get("content-type")?.includes("application/json")) {
-        const yataRes = await yataResponse.json();
-        yataMembers = yataRes.members || {};
-      }
-
-      return new Response(JSON.stringify({ 
-        torn: tornRes, 
-        ts: { members: yataMembers } 
-      }), { headers });
-
-    } catch (e) {
-      return new Response(JSON.stringify({ error: "Worker Logic Error: " + e.message }), { status: 500, headers });
+    // 1. DISCORD HANDSHAKE & COMMANDS
+    if (request.method === 'POST') {
+      return await this.handleDiscord(request, env);
     }
+
+    // 2. DASHBOARD & FILTERING LOGIC
+    if (url.searchParams.has('id')) {
+      const targetId = url.searchParams.get('id');
+      const data = await this.getUnifiedData(targetId, env);
+      
+      return new Response(JSON.stringify(data), { 
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } 
+      });
+    }
+
+    return new Response("Bridge Online", { status: 200 });
+  },
+
+  async handleDiscord(request, env) {
+    const signature = request.headers.get('X-Signature-Ed25519');
+    const timestamp = request.headers.get('X-Signature-Timestamp');
+    const body = await request.text();
+
+    // Verify Security Handshake
+    const isVerified = nacl.sign.detached.verify(
+      Buffer.from(timestamp + body),
+      Buffer.from(signature, 'hex'),
+      Buffer.from(env.DISCORD_PUBLIC_KEY, 'hex')
+    );
+
+    if (!isVerified) return new Response('Invalid signature', { status: 401 });
+
+    const interaction = JSON.parse(body);
+    if (interaction.type === 1) return new Response(JSON.stringify({ type: 1 }), { headers: { "Content-Type": "application/json" } });
+
+    // Handle /spy command from Discord
+    if (interaction.type === 2 && interaction.data.name === 'spy') {
+      const userId = interaction.data.options[0].value;
+      const data = await this.getUnifiedData(userId, env, true); // true = single user mode
+
+      return new Response(JSON.stringify({
+        type: 4,
+        data: { embeds: [this.createEmbed(data)] }
+      }), { headers: { "Content-Type": "application/json" } });
+    }
+  },
+
+  async getUnifiedData(id, env, isUser = false) {
+    const tornUrl = isUser ? `https://api.torn.com/user/${id}?selections=profile&key=${env.API_KEY}` : `https://api.torn.com/faction/${id}?selections=basic&key=${env.API_KEY}`;
+    const tsUrl = isUser ? `https://www.tornstats.com/api/v2/${env.TS_KEY}/spy/user/${id}` : `https://www.tornstats.com/api/v2/${env.TS_KEY}/spy/faction/${id}`;
+
+    const [tornRes, tsRes] = await Promise.all([
+      fetch(tornUrl).then(r => r.json()),
+      fetch(tsUrl).then(r => r.json())
+    ]);
+
+    // Format stats to prevent "Hidden" errors
+    const statsMap = {};
+    const tsData = isUser ? { [id]: tsRes.spy } : (tsRes.faction?.members || {});
+    
+    Object.keys(tsData).forEach(uid => {
+      if (tsData[uid]) {
+        statsMap[uid] = {
+          total: tsData[uid].total || 0,
+          dexterity: tsData[uid].dexterity || 0,
+          defense: tsData[uid].defense || 0,
+          strength: tsData[uid].strength || 0,
+          speed: tsData[uid].speed || 0
+        };
+      }
+    });
+
+    return { torn: tornRes, stats: statsMap, single: isUser ? { name: tornRes.name, id: id, status: tornRes.status?.description, state: tornRes.status?.state, stats: statsMap[id] } : null };
+  },
+
+  createEmbed(data) {
+    const s = data.single;
+    const total = s.stats?.total || 0;
+    let advice = "No spy data. Use caution.";
+    if (total > 0) {
+      if (s.stats.dexterity > total * 0.35) advice = "DEX TANK: Use Tear Gas.";
+      else if (s.stats.defense > total * 0.35) advice = "TURTLE: Use Piercing Ammo.";
+      else advice = "Balanced Build.";
+    }
+
+    return {
+      title: `Spy Report: ${s.name} [${s.id}]`,
+      color: s.state === 'Okay' ? 0x00ff00 : (s.state === 'Abroad' ? 0x3a86ff : 0xff4444),
+      fields: [
+        { name: "Total Stats", value: total > 0 ? (total / 1000000).toFixed(1) + "M" : "HIDDEN", inline: true },
+        { name: "Status", value: s.status || "Unknown" }
+      ],
+      footer: { text: "Tactical Advice: " + advice }
+    };
   }
 };
-// worker.js - DATA MAPPING AUDIT
-const tsRes = await fetch('https://www.tornstats.com/api/v2/' + tsKey + '/spy/faction/' + id).then(r => r.json());
-
-const mergedStats = {};
-// AUDIT: Torn Stats uses .faction.members for this endpoint
-if (tsRes && tsRes.faction && tsRes.faction.members) {
-    const spyData = tsRes.faction.members;
-    Object.keys(spyData).forEach(uid => {
-        mergedStats[uid] = {
-            total: spyData[uid].total || 0,
-            strength: spyData[uid].strength || 0,
-            defense: spyData[uid].defense || 0,
-            speed: spyData[uid].speed || 0,
-            dexterity: spyData[uid].dexterity || 0,
-            timestamp: spyData[uid].timestamp || 0
-        };
-    });
-}
