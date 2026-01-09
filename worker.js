@@ -2,23 +2,32 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    // 1. HANDLE CORS PREFLIGHT (Mandatory for Dashboard)
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, X-Signature-Ed25519, X-Signature-Timestamp",
+          "Access-Control-Max-Age": "86400",
+        },
+      });
+    }
+
+    // 2. DISCORD INTERACTION HANDLER
     if (request.method === 'POST' && url.pathname === '/interactions') {
       const signature = request.headers.get('X-Signature-Ed25519');
       const timestamp = request.headers.get('X-Signature-Timestamp');
       const body = await request.text();
 
-      // 1. Zero-Dependency Verification (Native Crypto)
       const isVerified = await this.verifyDiscordRequest(body, signature, timestamp, env.DISCORD_PUBLIC_KEY);
       if (!isVerified) return new Response('Invalid signature', { status: 401 });
 
       const interaction = JSON.parse(body);
-
-      // 2. Respond to Discord PING
       if (interaction.type === 1) {
         return new Response(JSON.stringify({ type: 1 }), { headers: { "Content-Type": "application/json" } });
       }
 
-      // 3. Handle /spy Command
       if (interaction.type === 2 && interaction.data.name === 'spy') {
         const id = interaction.data.options[0].value;
         const data = await this.getTornStats(id, env);
@@ -29,28 +38,39 @@ export default {
       }
     }
 
+    // 3. DASHBOARD DATA HANDLER (GET)
+    if (url.searchParams.has('id')) {
+      const data = await this.getTornStats(url.searchParams.get('id'), env);
+      return new Response(JSON.stringify(data), { 
+        headers: { 
+          "Content-Type": "application/json", 
+          "Access-Control-Allow-Origin": "*" // This fixes the CORS error
+        } 
+      });
+    }
+
     return new Response("Bridge Online", { status: 200 });
   },
 
   async verifyDiscordRequest(body, signature, timestamp, publicKey) {
-    const encoder = new TextEncoder();
-    const key = await crypto.subtle.importKey(
-      'raw', 
-      this.hexToUint8Array(publicKey), 
-      { name: 'NODE-ED25519', namedCurve: 'ED25519' }, 
-      false, 
-      ['verify']
-    );
-    return await crypto.subtle.verify(
-      'NODE-ED25519',
-      key,
-      this.hexToUint8Array(signature),
-      encoder.encode(timestamp + body)
-    );
-  },
-
-  hexToUint8Array(hex) {
-    return new Uint8Array(hex.match(/.{1,2}/g).map(val => parseInt(val, 16)));
+    try {
+      const encoder = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        'raw', 
+        new Uint8Array(publicKey.match(/.{1,2}/g).map(val => parseInt(val, 16))), 
+        { name: 'NODE-ED25519', namedCurve: 'ED25519' }, 
+        false, 
+        ['verify']
+      );
+      return await crypto.subtle.verify(
+        'NODE-ED25519',
+        key,
+        new Uint8Array(signature.match(/.{1,2}/g).map(val => parseInt(val, 16))),
+        encoder.encode(timestamp + body)
+      );
+    } catch (e) {
+      return false;
+    }
   },
 
   async getTornStats(id, env) {
@@ -61,7 +81,7 @@ export default {
       fetch(tornUrl).then(r => r.json())
     ]);
     const stats = tsRes.spy || { total: 0 };
-    return { name: tornRes.name, id, total: stats.total, status: tornRes.status.description };
+    return { name: tornRes.name, id, total: stats.total, status: tornRes.status?.description || "Unknown" };
   },
 
   createSpyEmbed(data) {
