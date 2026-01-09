@@ -3,8 +3,9 @@ export default {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
-    const TORN_KEY = "TS_gc43XVxOpCcwLnY6";
-    const YATA_KEY = "CZP2D2ZnbXWsYiDT";
+    // UPDATE THESE WITH YOUR WORKING KEYS
+    const TORN_KEY = "C9cgPgQFpGzA6n32"; 
+    const YATA_KEY = "CZP2D2ZnbXWsYiDT"; 
 
     const headers = {
       "Content-Type": "application/json",
@@ -17,31 +18,26 @@ export default {
     if (!id) return new Response(JSON.stringify({ error: "Missing ID" }), { status: 400, headers });
 
     try {
-      // 1. Fetch Torn Data
+      // TEST TORN
       const tornRes = await fetch("https://api.torn.com/faction/" + id + "?selections=basic&key=" + TORN_KEY);
-      const tornText = await tornRes.text(); // Get raw text first to avoid crash
-      
-      let tornData = { error: "Unknown Torn Error" };
-      try { tornData = JSON.parse(tornText); } catch(e) { return new Response(JSON.stringify({ error: "Torn API returned HTML" }), { status: 200, headers }); }
+      const tornText = await tornRes.text();
+      if (tornText.includes("<!doctype") || tornText.includes("<html")) {
+        return new Response(JSON.stringify({ error: "Torn API Key Rejected (HTML Returned)" }), { status: 200, headers });
+      }
+      const tornData = JSON.parse(tornText);
 
-      // 2. Fetch YATA Data
+      // TEST YATA
       let yataData = { members: {} };
-      try {
-        const yataRes = await fetch("https://yata.yt/api/v1/faction/export/" + id + "?key=" + YATA_KEY);
-        const yataText = await yataRes.text();
-        const yataJson = JSON.parse(yataText);
-        if (yataJson && !yataJson.error) { yataData = yataJson; }
-      } catch (yataErr) {
-        console.log("YATA Fetch Failed - Using Torn only");
+      const yataRes = await fetch("https://yata.yt/api/v1/faction/export/" + id + "/?key=" + YATA_KEY);
+      const yataText = await yataRes.text();
+      if (!yataText.includes("<!doctype") && yataText.trim().startsWith("{")) {
+        yataData = JSON.parse(yataText);
       }
 
-      return new Response(JSON.stringify({ 
-        torn: tornData, 
-        ts: yataData 
-      }), { status: 200, headers });
+      return new Response(JSON.stringify({ torn: tornData, ts: yataData }), { status: 200, headers });
 
     } catch (e) {
-      return new Response(JSON.stringify({ error: "Bridge Crash: " + e.message }), { status: 500, headers });
+      return new Response(JSON.stringify({ error: "Bridge Logic Error: " + e.message }), { status: 500, headers });
     }
   }
 };
