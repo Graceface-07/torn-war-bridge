@@ -2,27 +2,35 @@ export default {
   async fetch(request, env) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const apiKey = env.API_KEY;
+    
+    // Updated Keys from your request
+    const TORN_KEY = "TS_gc43XVxOpCcwLnY6";
+    const YATA_KEY = "CZP2D2ZnbXWsYiDT";
 
     const headers = {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": "*"
     };
 
-    if (!id || !apiKey) {
-      return new Response(JSON.stringify({ error: 'Missing ID or API_KEY' }), { status: 400, headers });
-    }
+    if (!id) return new Response(JSON.stringify({ error: "Missing ID" }), { status: 400, headers });
 
     try {
-      // Parallel fetch for speed
-      const [tornRes, tsRes] = await Promise.all([
-        fetch(`https://api.torn.com/faction/${id}?selections=basic&key=${apiKey}`).then(r => r.json()),
-        fetch(`https://www.tornstats.com/api/v2/${apiKey}/faction/members`).then(r => r.json())
-      ]);
+      // 1. Fetch Torn Data
+      const tornRes = await fetch("https://api.torn.com/faction/" + id + "?selections=basic&key=" + TORN_KEY);
+      const tornData = await tornRes.json();
 
-      return new Response(JSON.stringify({ torn: tornRes, ts: tsRes }), { headers });
+      // 2. Fetch YATA Data
+      const yataRes = await fetch("https://yata.yt/api/v1/faction/members/?key=" + YATA_KEY + "&faction=" + id);
+      const yataData = await yataRes.json();
+
+      // 3. Combine and Return
+      return new Response(JSON.stringify({ 
+        torn: tornData, 
+        ts: yataData 
+      }), { status: 200, headers });
+
     } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
+      return new Response(JSON.stringify({ error: "Sync Failed" }), { status: 500, headers });
     }
   }
 };
