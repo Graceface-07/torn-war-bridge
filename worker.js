@@ -1,31 +1,30 @@
 export default {
-  async fetch(request) {
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    };
-
-    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-
+  async fetch(request, env) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const TORN_KEY = 'rwLgZTyqgWDxhoCx';
-    const TS_KEY = 'TS_gc43XVxOpCcwLnY6';
+    const apiKey = env.API_KEY; // Ensure this is in Settings -> Variables
 
-    if (!id) return new Response("Missing ID", { status: 400, headers: corsHeaders });
+    if (!id || !apiKey) {
+      return new Response(JSON.stringify({ error: 'Missing ID or API_KEY' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
 
     try {
-      const [torn, ts] = await Promise.all([
-        fetch(`https://api.torn.com/faction/${id}?selections=basic&key=${TORN_KEY}`).then(r => r.json()),
-        fetch(`https://www.tornstats.com/api/v2/${TS_KEY}/scouter/faction/${id}`).then(r => r.json())
+      const [tornRes, tsRes] = await Promise.all([
+        fetch(`https://api.torn.com/faction/${id}?selections=basic&key=${apiKey}`).then(r => r.json()),
+        fetch(`https://www.tornstats.com/api/v2/${apiKey}/faction/${id}`).then(r => r.json())
       ]);
 
-      return new Response(JSON.stringify({ torn, ts }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      return new Response(JSON.stringify({ torn: tornRes, ts: tsRes }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
     } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: e.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
     }
   }
 };
