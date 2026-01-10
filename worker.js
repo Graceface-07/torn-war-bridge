@@ -1,97 +1,192 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const path = url.pathname;
+    const { searchParams } = url;
 
-    // 1. HANDLE CORS PREFLIGHT (Mandatory for Dashboard)
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, X-Signature-Ed25519, X-Signature-Timestamp",
-          "Access-Control-Max-Age": "86400",
-        },
-      });
-    }
+    // ---------------------------------------------------------
+    // CONFIG
+    // ---------------------------------------------------------
 
-    // 2. DISCORD INTERACTION HANDLER
-    if (request.method === 'POST' && url.pathname === '/interactions') {
-      const signature = request.headers.get('X-Signature-Ed25519');
-      const timestamp = request.headers.get('X-Signature-Timestamp');
-      const body = await request.text();
+    const TORN_KEYS = [
+      "gc43XVxOpCcwLnY6","rKP5EwA6DmSufqEm","8YgzsJntLW3yTboP",
+      "fiwzsFpv7BuGuTH3","3grddfsZEZsTlWBp","RQmyHvIAIuJ2iCZX",
+      "rwLgZTyqgWDxhoCx","CZP2D2ZnbXWsYiDT","5zgirNZtPxRdeFFL",
+      "C9cgPgQFpGzA6n32","sUMyDEhMUi3kNgY7","UO429efUvPIQW5Zq"
+    ];
 
-      const isVerified = await this.verifyDiscordRequest(body, signature, timestamp, env.DISCORD_PUBLIC_KEY);
-      if (!isVerified) return new Response('Invalid signature', { status: 401 });
+    const TS_KEY = env.API_KEY;
+    const KV = env.ROTATOR;
 
-      const interaction = JSON.parse(body);
-      if (interaction.type === 1) {
-        return new Response(JSON.stringify({ type: 1 }), { headers: { "Content-Type": "application/json" } });
-      }
+    const WEBHOOK_URL =
+      "https://script.google.com/macros/s/AKfycbzGbzT36ppGFG3bkNBeYYkd0lrO73Jk-wySf5hdiNoHlHy0XBY_0SPbpJCfYcSNwYPUDg/exec?key=REPLACE_ME";
 
-      if (interaction.type === 2 && interaction.data.name === 'spy') {
-        const id = interaction.data.options[0].value;
-        const data = await this.getTornStats(id, env);
-        return new Response(JSON.stringify({
-          type: 4,
-          data: { embeds: [this.createSpyEmbed(data)] }
-        }), { headers: { "Content-Type": "application/json" } });
-      }
-    }
-
-    // 3. DASHBOARD DATA HANDLER (GET)
-    if (url.searchParams.has('id')) {
-      const data = await this.getTornStats(url.searchParams.get('id'), env);
-      return new Response(JSON.stringify(data), { 
-        headers: { 
-          "Content-Type": "application/json", 
-          "Access-Control-Allow-Origin": "*" // This fixes the CORS error
-        } 
-      });
-    }
-
-    return new Response("Bridge Online", { status: 200 });
-  },
-
-  async verifyDiscordRequest(body, signature, timestamp, publicKey) {
-    try {
-      const encoder = new TextEncoder();
-      const key = await crypto.subtle.importKey(
-        'raw', 
-        new Uint8Array(publicKey.match(/.{1,2}/g).map(val => parseInt(val, 16))), 
-        { name: 'NODE-ED25519', namedCurve: 'ED25519' }, 
-        false, 
-        ['verify']
-      );
-      return await crypto.subtle.verify(
-        'NODE-ED25519',
-        key,
-        new Uint8Array(signature.match(/.{1,2}/g).map(val => parseInt(val, 16))),
-        encoder.encode(timestamp + body)
-      );
-    } catch (e) {
-      return false;
-    }
-  },
-
-  async getTornStats(id, env) {
-    const tsUrl = `https://www.tornstats.com/api/v2/${env.TS_KEY}/spy/user/${id}`;
-    const tornUrl = `https://api.torn.com/user/${id}?selections=profile&key=${env.API_KEY}`;
-    const [tsRes, tornRes] = await Promise.all([
-      fetch(tsUrl).then(r => r.json()),
-      fetch(tornUrl).then(r => r.json())
-    ]);
-    const stats = tsRes.spy || { total: 0 };
-    return { name: tornRes.name, id, total: stats.total, status: tornRes.status?.description || "Unknown" };
-  },
-
-  createSpyEmbed(data) {
-    return {
-      title: `Spy Report: ${data.name} [${data.id}]`,
-      color: 0x00ff00,
-      fields: [
-        { name: "Total Stats", value: data.total > 0 ? (data.total / 1000000).toFixed(1) + "M" : "HIDDEN", inline: true },
-        { name: "Status", value: data.status }
-      ]
+    const headers = {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "*"
     };
+
+    if (request.method === "OPTIONS")
+      return new Response(null, { headers });
+
+    // ---------------------------------------------------------
+    // KEY ROTATION
+    // ---------------------------------------------------------
+
+    async function getIndex() {
+      const v = await KV.get("idx");
+      const i = v ? parseInt(v, 10) : 0;
+      return Number.isNaN(i) ? 0 : i;
+    }
+
+    async function setIndex(i) {
+      await KV.put("idx", String(i));
+    }
+
+    async function tryKey(key, factionId) {
+      const r = await fetch(
+        `https://api.torn.com/faction/${factionId}?selections=basic&key=${key}`
+      );
+      const s = r.status;
+      const t = await r.text();
+
+      if (s === 429) throw "RATE";
+      if (!t || t.includes("<")) throw "BAD";
+      let j;
+      try { j = JSON.parse(t); } catch { throw "JSON"; }
+      if (j.error) throw "ERR";
+      return j;
+    }
+
+    async function fetchTorn(factionId) {
+      const total = TORN_KEYS.length;
+      let idx = await getIndex();
+      if (idx < 0 || idx >= total) idx = 0;
+
+      let last = null;
+
+      for (let i = 0; i < total; i++) {
+        const k = TORN_KEYS[(idx + i) % total];
+        try {
+          const d = await tryKey(k, factionId);
+          await setIndex((idx + i) % total);
+          return d;
+        } catch (e) {
+          last = e;
+        }
+      }
+
+      throw last || "FAIL";
+    }
+
+    // ---------------------------------------------------------
+    // TS FETCH
+    // ---------------------------------------------------------
+
+    async function fetchTS(factionId) {
+      if (!TS_KEY) return { members: {} };
+      try {
+        const r = await fetch(
+          `https://yata.yt/api/v1/faction/export/${factionId}/?key=${TS_KEY}`
+        );
+        const t = await r.text();
+        if (!t || t.includes("<") || !t.trim().startsWith("{"))
+          return { members: {} };
+        return JSON.parse(t);
+      } catch {
+        return { members: {} };
+      }
+    }
+
+    // ---------------------------------------------------------
+    // SHEET WRITER
+    // ---------------------------------------------------------
+
+    async function sendToSheet(payload) {
+      const r = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const t = await r.text();
+      return { ok: r.ok, status: r.status, response: t };
+    }
+
+    // ---------------------------------------------------------
+    // ITEM UNIVERSE (SCAFFOLD)
+    // ---------------------------------------------------------
+
+    const ITEM_UNIVERSE = {
+      BUY: {},
+      SELL: {},
+      TRADE: {},
+      UNKNOWN: {}
+    };
+
+    function classifyItem(name) {
+      const n = name.toLowerCase();
+      if (n.includes("ammo")) return "BUY";
+      if (n.includes("vest")) return "BUY";
+      if (n.includes("chain")) return "SELL";
+      return "UNKNOWN";
+    }
+
+    // ---------------------------------------------------------
+    // TRANSACTION PARSER (SCAFFOLD)
+    // ---------------------------------------------------------
+
+    function parseTransaction(body) {
+      const ts = Date.now();
+      const type = body.type || "UNKNOWN";
+      const item = body.item || "UNKNOWN";
+      const price = body.price || 0;
+      const qty = body.qty || 1;
+      const side = classifyItem(item);
+
+      return {
+        ts,
+        type,
+        item,
+        price,
+        qty,
+        side
+      };
+    }
+
+    // ---------------------------------------------------------
+    // ROUTES
+    // ---------------------------------------------------------
+
+    // EVENT → SHEET
+    if (path === "/event" && request.method === "POST") {
+      const body = await request.json();
+      const tx = parseTransaction(body);
+      const r = await sendToSheet(tx);
+      return new Response(JSON.stringify(r), { headers });
+    }
+
+    // TORN + TS MERGE
+    if (path === "/torn") {
+      const factionId = searchParams.get("id");
+      if (!factionId)
+        return new Response(JSON.stringify({ error: "NO_ID" }), { status: 400, headers });
+
+      try {
+        const torn = await fetchTorn(factionId);
+        const ts = await fetchTS(factionId);
+        return new Response(JSON.stringify({ torn, ts }), { headers });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: "FAIL", details: e }), {
+          status: 502,
+          headers
+        });
+      }
+    }
+
+    // DEFAULT
+    return new Response(JSON.stringify({ status: "OK" }), { headers });
   }
 };
+I
