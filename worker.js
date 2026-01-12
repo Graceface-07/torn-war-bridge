@@ -1,62 +1,45 @@
 var worker_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const path = url.pathname;
-    const { searchParams } = url;
+    const id = url.searchParams.get("id");
+    const forceUpdate = url.searchParams.has("update"); // Add ?update=1 to bypass cache
+    const headers = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
 
-    const TORN_KEYS = [
-      "gc43XVxOpCcwLnY6", "rKP5EwA6DmSufqEm", "8YgzsJntLW3yTboP",
-      "fiwzsFpv7BuGuTH3", "3grddfsZEZsTlWBp", "RQmyHvIAIuJ2iCZX",
-      "rwLgZTyqgWDxhoCx", "CZP2D2ZnbXWsYiDT", "5zgirNZtPxRdeFFL",
-      "C9cgPgQFpGzA6n32", "sUMyDEhMUi3kNgY7", "UO429efUvPIQW5Zq"
-    ];
+    if (!id) return new Response(JSON.stringify({ error: "No ID" }), { status: 400, headers });
 
-    const headers = {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "*"
-    };
-
-    if (request.method === "OPTIONS") return new Response(null, { headers });
-
-    if (path === "/torn" || searchParams.has("id")) {
-      const id = searchParams.get("id");
-      if (!id) return new Response(JSON.stringify({ error: "No ID provided" }), { status: 400, headers });
-      
-      try {
-        const data = await this.getIntegratedData(id, TORN_KEYS, env);
-        return new Response(JSON.stringify(data), { headers });
-      } catch (e) {
-        return new Response(JSON.stringify({ error: "Fetch Failed", details: e.message }), { status: 502, headers });
-      }
+    // 1. Check Cache First (KV Storage)
+    const cachedData = await env.ROTATOR.get(`spy_${id}`);
+    if (cachedData && !forceUpdate) {
+      return new Response(cachedData, { headers: { ...headers, "X-Cache": "HIT" } });
     }
 
-    return new Response(JSON.stringify({ status: "Worker Online", mode: "Dashboard-Only" }), { headers });
+    // 2. Fetch Fresh Data (Only if not in cache or forced)
+    try {
+      const data = await this.getIntegratedData(id, env);
+      
+      // 3. Store in KV for 24 hours (86400 seconds)
+      await env.ROTATOR.put(`spy_${id}`, JSON.stringify(data), { expirationTtl: 86400 });
+      
+      return new Response(JSON.stringify(data), { headers: { ...headers, "X-Cache": "MISS" } });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
+    }
   },
 
-  async getIntegratedData(id, keys, env) {
-    const v = await env.ROTATOR.get("idx");
-    let idx = v ? parseInt(v, 10) : 0;
-    const key = keys[idx % keys.length];
-
+  async getIntegratedData(id, env) {
+    const key = "gc43XVxOpCcwLnY6"; 
     const tsUrl = `https://www.tornstats.com/api/v2/${env.TS_KEY}/spy/user/${id}`;
     const tornUrl = `https://api.torn.com/user/${id}?selections=profile&key=${key}`;
 
     const [tsRes, tornRes] = await Promise.all([
-      fetch(tsUrl).then((r) => r.json()),
-      fetch(tornUrl).then((r) => r.json())
+      fetch(tsUrl).then(r => r.json()),
+      fetch(tornUrl).then(r => r.json())
     ]);
 
-    if (tornRes.error) {
-      await env.ROTATOR.put("idx", String(idx + 1));
-    }
-
-    const s = tsRes.spy || (tsRes.data && tsRes.data.spy) || {};
-
+    const s = tsRes.spy || {};
     return {
+      id,
       name: tornRes.name || "Unknown",
-      id: id,
       level: tornRes.level || 0,
       total: s.total || 0,
       strength: s.strength || 0,
@@ -64,8 +47,7 @@ var worker_default = {
       speed: s.speed || 0,
       dexterity: s.dexterity || 0,
       status: tornRes.status?.description || "Unknown",
-      last_spied: s.timestamp ? new Date(s.timestamp * 1e3).toLocaleDateString() : "Never",
-      source: "TornStats"
+      last_updated: new Date().toISOString()
     };
   }
 };
