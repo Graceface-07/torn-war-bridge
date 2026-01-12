@@ -1,31 +1,26 @@
 var worker_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const idParam = url.searchParams.get("id");
     const headers = { 
       "Content-Type": "application/json", 
       "Access-Control-Allow-Origin": "*" 
     };
 
-    if (!idParam) return new Response(JSON.stringify({ error: "No ID" }), { status: 400, headers });
+    // --- RECEIVE DATA FROM GOOGLE SHEET ---
+    if (request.method === "POST" && url.pathname === "/update-bridge") {
+      const data = await request.json();
+      // Store the whole batch in KV
+      await env.ROTATOR.put("tactical_data", JSON.stringify(data));
+      return new Response(JSON.stringify({ success: true }), { headers });
+    }
 
-    const ids = idParam.split(",");
-    
-    // GENERATE DUMMY DATA FOR TESTING
-    const dummyResults = ids.map(id => ({
-      id: id.trim(),
-      name: "Test_User_" + id.trim(),
-      level: Math.floor(Math.random() * 100),
-      total: 5000000,
-      strength: 1250000,
-      defense: 1250000,
-      speed: 1250000,
-      dexterity: 1250000,
-      status: "Okay",
-      last_updated: new Date().toISOString()
-    }));
+    // --- SERVE DATA TO TACTICAL COMMAND PAGE ---
+    if (url.pathname === "/get-tactical") {
+      const data = await env.ROTATOR.get("tactical_data");
+      return new Response(data || "[]", { headers });
+    }
 
-    return new Response(JSON.stringify(dummyResults), { headers });
+    return new Response("Bridge Active", { headers });
   }
 };
 
