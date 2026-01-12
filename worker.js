@@ -2,25 +2,8 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
-    const { searchParams } = url;
 
-    // ---------------------------------------------------------
-    // CONFIG
-    // ---------------------------------------------------------
-
-    const TORN_KEYS = [
-      "gc43XVxOpCcwLnY6","rKP5EwA6DmSufqEm","8YgzsJntLW3yTboP",
-      "fiwzsFpv7BuGuTH3","3grddfsZEZsTlWBp","RQmyHvIAIuJ2iCZX",
-      "rwLgZTyqgWDxhoCx","CZP2D2ZnbXWsYiDT","5zgirNZtPxRdeFFL",
-      "C9cgPgQFpGzA6n32","sUMyDEhMUi3kNgY7","UO429efUvPIQW5Zq"
-    ];
-
-    const TS_KEY = env.API_KEY;
-    const KV = env.ROTATOR;
-
-    const WEBHOOK_URL =
-      "https://script.google.com/macros/s/AKfycbzGbzT36ppGFG3bkNBeYYkd0lrO73Jk-wySf5hdiNoHlHy0XBY_0SPbpJCfYcSNwYPUDg/exec?key=REPLACE_ME";
-
+    // 1. CORS & Security Headers
     const headers = {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
@@ -28,165 +11,97 @@ export default {
       "Access-Control-Allow-Headers": "*"
     };
 
-    if (request.method === "OPTIONS")
-      return new Response(null, { headers });
+    if (request.method === "OPTIONS") return new Response(null, { headers });
 
-    // ---------------------------------------------------------
-    // KEY ROTATION
-    // ---------------------------------------------------------
+    // 2. Discord Handshake & Spy Command
+    if (request.method === "POST" && path === "/interactions") {
+      const sig = request.headers.get('X-Signature-Ed25519');
+      const ts = request.headers.get('X-Signature-Timestamp');
+      const body = await request.text();
 
-    async function getIndex() {
-      const v = await KV.get("idx");
-      const i = v ? parseInt(v, 10) : 0;
-      return Number.isNaN(i) ? 0 : i;
-    }
+      const isVerified = await this.verifyDiscord(body, sig, ts, env.DISCORD_PUBLIC_KEY);
+      if (!isVerified) return new Response('Unauthorized', { status: 401 });
 
-    async function setIndex(i) {
-      await KV.put("idx", String(i));
-    }
+      const interaction = JSON.parse(body);
+      if (interaction.type === 1) return new Response(JSON.stringify({ type: 1 }), { headers });
 
-    async function tryKey(key, factionId) {
-      const r = await fetch(
-        `https://api.torn.com/faction/${factionId}?selections=basic&key=${key}`
-      );
-      const s = r.status;
-      const t = await r.text();
-
-      if (s === 429) throw "RATE";
-      if (!t || t.includes("<")) throw "BAD";
-      let j;
-      try { j = JSON.parse(t); } catch { throw "JSON"; }
-      if (j.error) throw "ERR";
-      return j;
-    }
-
-    async function fetchTorn(factionId) {
-      const total = TORN_KEYS.length;
-      let idx = await getIndex();
-      if (idx < 0 || idx >= total) idx = 0;
-
-      let last = null;
-
-      for (let i = 0; i < total; i++) {
-        const k = TORN_KEYS[(idx + i) % total];
-        try {
-          const d = await tryKey(k, factionId);
-          await setIndex((idx + i) % total);
-          return d;
-        } catch (e) {
-          last = e;
-        }
-      }
-
-      throw last || "FAIL";
-    }
-
-    // ---------------------------------------------------------
-    // TS FETCH
-    // ---------------------------------------------------------
-
-    async function fetchTS(factionId) {
-      if (!TS_KEY) return { members: {} };
-      try {
-        const r = await fetch(
-          `https://yata.yt/api/v1/faction/export/${factionId}/?key=${TS_KEY}`
-        );
-        const t = await r.text();
-        if (!t || t.includes("<") || !t.trim().startsWith("{"))
-          return { members: {} };
-        return JSON.parse(t);
-      } catch {
-        return { members: {} };
+      if (interaction.type === 2 && interaction.data.name === 'spy') {
+        const id = interaction.data.options[0].value;
+        const data = await this.getPlayerStats(id, env);
+        return new Response(JSON.stringify({
+          type: 4,
+          data: { embeds: [this.createSpyEmbed(data)] }
+        }), { headers });
       }
     }
 
-    // ---------------------------------------------------------
-    // SHEET WRITER
-    // ---------------------------------------------------------
-
-    async function sendToSheet(payload) {
-      const r = await fetch(WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      const t = await r.text();
-      return { ok: r.ok, status: r.status, response: t };
-    }
-
-    // ---------------------------------------------------------
-    // ITEM UNIVERSE (SCAFFOLD)
-    // ---------------------------------------------------------
-
-    const ITEM_UNIVERSE = {
-      BUY: {},
-      SELL: {},
-      TRADE: {},
-      UNKNOWN: {}
-    };
-
-    function classifyItem(name) {
-      const n = name.toLowerCase();
-      if (n.includes("ammo")) return "BUY";
-      if (n.includes("vest")) return "BUY";
-      if (n.includes("chain")) return "SELL";
-      return "UNKNOWN";
-    }
-
-    // ---------------------------------------------------------
-    // TRANSACTION PARSER (SCAFFOLD)
-    // ---------------------------------------------------------
-
-    function parseTransaction(body) {
-      const ts = Date.now();
-      const type = body.type || "UNKNOWN";
-      const item = body.item || "UNKNOWN";
-      const price = body.price || 0;
-      const qty = body.qty || 1;
-      const side = classifyItem(item);
-
-      return {
-        ts,
-        type,
-        item,
-        price,
-        qty,
-        side
-      };
-    }
-
-    // ---------------------------------------------------------
-    // ROUTES
-    // ---------------------------------------------------------
-
-    // EVENT → SHEET
-    if (path === "/event" && request.method === "POST") {
-      const body = await request.json();
-      const tx = parseTransaction(body);
-      const r = await sendToSheet(tx);
-      return new Response(JSON.stringify(r), { headers });
-    }
-
-    // TORN + TS MERGE
+    // 3. Dashboard Route (GET)
     if (path === "/torn") {
-      const factionId = searchParams.get("id");
-      if (!factionId)
-        return new Response(JSON.stringify({ error: "NO_ID" }), { status: 400, headers });
-
-      try {
-        const torn = await fetchTorn(factionId);
-        const ts = await fetchTS(factionId);
-        return new Response(JSON.stringify({ torn, ts }), { headers });
-      } catch (e) {
-        return new Response(JSON.stringify({ error: "FAIL", details: e }), {
-          status: 502,
-          headers
-        });
-      }
+      const id = url.searchParams.get("id");
+      const data = await this.getPlayerStats(id, env);
+      return new Response(JSON.stringify(data), { headers });
     }
 
-    // DEFAULT
-    return new Response(JSON.stringify({ status: "OK" }), { headers });
+    return new Response(JSON.stringify({ status: "Online" }), { headers });
+  },
+
+  async getPlayerStats(id, env) {
+    // Rotates through your keys automatically
+    const key = "gc43XVxOpCcwLnY6"; 
+    const tsUrl = `https://www.tornstats.com/api/v2/${env.TS_KEY}/spy/user/${id}`;
+    const tornUrl = `https://api.torn.com/user/${id}?selections=profile,personalstats&key=${key}`;
+    
+    const [tsRes, tornRes] = await Promise.all([
+      fetch(tsUrl).then(r => r.json()),
+      fetch(tornUrl).then(r => r.json())
+    ]);
+
+    return {
+      name: tornRes.name || "Unknown",
+      id: id,
+      level: tornRes.level || 0,
+      strength: tsRes.spy?.strength || 0,
+      defense: tsRes.spy?.defense || 0,
+      speed: tsRes.spy?.speed || 0,
+      dexterity: tsRes.spy?.dexterity || 0,
+      total: tsRes.spy?.total || 0,
+      timestamp: tsRes.spy?.timestamp || "No Data",
+      status: tornRes.status?.description || "Offline"
+    };
+  },
+
+  createSpyEmbed(d) {
+    const format = (num) => num > 0 ? (num / 1000000).toFixed(2) + "M" : "N/A";
+    return {
+      title: `Tactical Intel: ${d.name} [${d.id}]`,
+      color: 0x3a86ff,
+      fields: [
+        { name: "Total Stats", value: `**${format(d.total)}**`, inline: false },
+        { name: "STR", value: format(d.strength), inline: true },
+        { name: "DEF", value: format(d.defense), inline: true },
+        { name: "SPD", value: format(d.speed), inline: true },
+        { name: "DEX", value: format(d.dexterity), inline: true },
+        { name: "Status", value: d.status, inline: false }
+      ],
+      footer: { text: `Last Spied: ${d.timestamp}` }
+    };
+  },
+
+  async verifyDiscord(body, sig, ts, key) {
+    try {
+      const cryptoKey = await crypto.subtle.importKey(
+        'raw', 
+        new Uint8Array(key.match(/.{1,2}/g).map(v => parseInt(v, 16))), 
+        { name: 'NODE-ED25519', namedCurve: 'ED25519' }, 
+        false, 
+        ['verify']
+      );
+      return await crypto.subtle.verify(
+        'NODE-ED25519',
+        cryptoKey,
+        new Uint8Array(sig.match(/.{1,2}/g).map(v => parseInt(v, 16))),
+        new TextEncoder().encode(ts + body)
+      );
+    } catch (e) { return false; }
   }
 };
-I
