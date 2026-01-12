@@ -12,11 +12,22 @@ export default {
     if (method === "OPTIONS") return new Response(null, { headers });
 
     try {
-      if (method === "POST") {
-        const body = await request.json();
-        await env.ROTATOR.put(`spy_${body.id}`, JSON.stringify({ total: Number(body.total) }));
-        return new Response(JSON.stringify({ success: true }), { headers });
-      }
+      // Inside the try block of your worker.js
+if (method === "POST") {
+  const body = await request.json();
+  
+  // Check if the body is an array (Batch Import)
+  if (Array.isArray(body)) {
+    for (const spy of body) {
+      await env.ROTATOR.put(`spy_${spy.id}`, JSON.stringify({ total: Number(spy.total) }));
+    }
+    return new Response(JSON.stringify({ success: true, count: body.length }), { headers });
+  } 
+  
+  // Single Entry (HUD Manual Box)
+  await env.ROTATOR.put(`spy_${body.id}`, JSON.stringify({ total: Number(body.total) }));
+  return new Response(JSON.stringify({ success: true }), { headers });
+}
 
       const idParam = url.searchParams.get("id");
       const forceUpdate = url.searchParams.get("update") === "true";
