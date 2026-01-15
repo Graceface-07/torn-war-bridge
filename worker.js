@@ -1,30 +1,29 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const headers = {
-      "Access-Control-Allow-Origin": "*",
-      "Content-Type": "application/json"
-    };
+    const mode = url.searchParams.get("mode"); // Explicitly capture the mode
+    const headers = { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" };
 
     try {
-      if (request.method === "POST" && url.searchParams.get("mode") === "global_sync") {
-        if (!env.ROTATOR) throw new Error("KV Namespace 'ROTATOR' missing.");
+      // DEBUG: If you hit this in a browser, it will tell you what mode it sees
+      if (request.method === "GET" && !url.searchParams.has("id")) {
+        return new Response(JSON.stringify({ status: "Online", detected_mode: mode }), { headers });
+      }
 
-        const tsRes = await fetch(`https://www.tornstats.com/api/v2/${env.TS_KEY}/spies`);
-        const tsData = await tsRes.json();
-        
-        const yataRes = await fetch(`https://yata.yt/api/v1/spies/?key=${env.YATA}`);
-        const yataData = await yataRes.json();
-
-        // Combine all unique IDs
-        const allIds = new Set([
-          ...Object.keys(tsData.spies || {}),
-          ...Object.keys(yataData.spies || {})
+      // Handle the Global Sync
+      if (mode === "global_sync") {
+        const [tsRes, yataRes] = await Promise.all([
+          fetch(`https://www.tornstats.com/api/v2/${env.TS_KEY}/spies`),
+          fetch(`https://yata.yt/api/v1/spies/?key=${env.Yata}`) // Matches your "Yata" naming
         ]);
 
-        let count = 0;
-        // Process in chunks of 50 to avoid CPU/Memory crashes
+        const tsData = await tsRes.json();
+        const yataData = await yataRes.json();
+
+        const allIds = new Set([...Object.keys(tsData.spies || {}), ...Object.keys(yataData.spies || {})]);
         const ids = Array.from(allIds);
+        let count = 0;
+
         for (let i = 0; i < ids.length; i += 50) {
           const chunk = ids.slice(i, i + 50);
           await Promise.all(chunk.map(id => {
@@ -40,11 +39,10 @@ export default {
           }));
           count += chunk.length;
         }
-
         return new Response(JSON.stringify({ success: true, total_imported: count }), { headers });
       }
 
-      return new Response(JSON.stringify({ error: "No mode selected" }), { status: 400, headers });
+      return new Response(JSON.stringify({ error: "No mode selected", received_mode: mode }), { status: 400, headers });
     } catch (e) {
       return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
     }
