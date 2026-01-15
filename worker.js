@@ -1,55 +1,43 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const headers = { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" };
+    const headers = { "Content-Type": "application/json" };
     const YATA_KEY = 'CZP2D2ZnbXWsYiDT';
 
     try {
-      const factionId = url.searchParams.get("id");
-      if (!factionId) return new Response(JSON.stringify({ error: "Missing Faction ID" }), { status: 400, headers });
-
-      // 1. Get the current Faction members from Torn
-      const tornRes = await fetch(`https://api.torn.com/faction/${factionId}?selections=basic&key=${env.TORN_KEY}`);
-      const tornData = await tornRes.json();
-      
-      // 2. Fetch the massive YATA list (One big pull is allowed)
+      // 1. Fetch the full list from YATA
       const yataRes = await fetch(`https://yata.yt/api/v1/spies/?key=${YATA_KEY}`);
       const yataData = await yataRes.json();
+      const allIds = Object.keys(yataData.spies || {});
 
-      const membersList = [];
-      const memberIds = Object.keys(tornData.members);
+      // 2. Get the "Offset" (where we left off)
+      const offset = parseInt(url.searchParams.get("offset") || "0");
+      const batchSize = 500; // Cloudflare Free limit is roughly 500-1000 writes per trigger
+      const chunk = allIds.slice(offset, offset + batchSize);
 
-      // 3. Match faction members against the 14,712 spies
-      for (const id of memberIds) {
-        const m = tornData.members[id];
-        const spy = yataData.spies?.[id] || null;
+      // 3. Save this chunk to your ROTATOR KV
+      await Promise.all(chunk.map(id => {
+        const s = yataData.spies[id];
+        return env.ROTATOR.put(`spy_${id}`, JSON.stringify({
+          total: s.total || 0,
+          strength: s.strength || 0,
+          defense: s.defense || 0,
+          speed: s.speed || 0,
+          dexterity: s.dexterity || 0,
+          timestamp: Math.floor(Date.now() / 1000)
+        }));
+      }));
 
-        // Auto-save found spies to your KV Vault for faster future access (up to 50 per load)
-        if (spy && memberIds.indexOf(id) < 50) {
-          await env.ROTATOR.put(`spy_${id}`, JSON.stringify(spy));
-        }
-
-        membersList.push({
-          id,
-          name: m.name,
-          level: m.level,
-          status: m.status.description,
-          total: spy ? spy.total : 0,
-          strength: spy ? spy.strength : 0,
-          defense: spy ? spy.defense : 0,
-          speed: spy ? spy.speed : 0,
-          dexterity: spy ? spy.dexterity : 0
-        });
-      }
-
-      return new Response(JSON.stringify({ 
-        faction: tornData.name, 
-        member_count: memberIds.length,
-        members: membersList 
+      return new Response(JSON.stringify({
+        success: true,
+        imported_this_batch: chunk.length,
+        next_offset: offset + batchSize,
+        total_remaining: allIds.length - (offset + batchSize),
+        done: (offset + batchSize) >= allIds.length
       }), { headers });
 
     } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
+      return new Response("IMPORT_ERROR: " + e.message, { status: 500 });
     }
   }
 };
