@@ -1,39 +1,55 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const mode = url.searchParams.get("mode");
-    const headers = { "Content-Type": "application/json" };
-
+    const headers = { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" };
     const YATA_KEY = 'CZP2D2ZnbXWsYiDT';
 
     try {
-      if (mode === "global_sync") {
-        // 1. Try to fetch JUST YATA first
-        const yataRes = await fetch(`https://yata.yt/api/v1/spies/?key=${YATA_KEY}`);
-        
-        // If YATA returns HTML instead of JSON, this will catch it
-        const contentType = yataRes.headers.get("content-type");
-        if (contentType && contentType.includes("text/html")) {
-          return new Response("YATA_API_ERROR: YATA returned an HTML error page. Check if your API Key is correct.", { status: 500 });
+      const factionId = url.searchParams.get("id");
+      if (!factionId) return new Response(JSON.stringify({ error: "Missing Faction ID" }), { status: 400, headers });
+
+      // 1. Get the current Faction members from Torn
+      const tornRes = await fetch(`https://api.torn.com/faction/${factionId}?selections=basic&key=${env.TORN_KEY}`);
+      const tornData = await tornRes.json();
+      
+      // 2. Fetch the massive YATA list (One big pull is allowed)
+      const yataRes = await fetch(`https://yata.yt/api/v1/spies/?key=${YATA_KEY}`);
+      const yataData = await yataRes.json();
+
+      const membersList = [];
+      const memberIds = Object.keys(tornData.members);
+
+      // 3. Match faction members against the 14,712 spies
+      for (const id of memberIds) {
+        const m = tornData.members[id];
+        const spy = yataData.spies?.[id] || null;
+
+        // Auto-save found spies to your KV Vault for faster future access (up to 50 per load)
+        if (spy && memberIds.indexOf(id) < 50) {
+          await env.ROTATOR.put(`spy_${id}`, JSON.stringify(spy));
         }
 
-        const yataData = await yataRes.json();
-        
-        if (!yataData.spies) {
-          return new Response("YATA_DATA_ERROR: Connected but no spies found in account.", { status: 200 });
-        }
-
-        const ids = Object.keys(yataData.spies);
-        return new Response(JSON.stringify({ 
-          success: true, 
-          source: "YATA", 
-          count_found: ids.length 
-        }), { headers });
+        membersList.push({
+          id,
+          name: m.name,
+          level: m.level,
+          status: m.status.description,
+          total: spy ? spy.total : 0,
+          strength: spy ? spy.strength : 0,
+          defense: spy ? spy.defense : 0,
+          speed: spy ? spy.speed : 0,
+          dexterity: spy ? spy.dexterity : 0
+        });
       }
 
-      return new Response(JSON.stringify({ status: "Isolation Test Ready" }), { headers });
+      return new Response(JSON.stringify({ 
+        faction: tornData.name, 
+        member_count: memberIds.length,
+        members: membersList 
+      }), { headers });
+
     } catch (e) {
-      return new Response("CRASH_DETAIL: " + e.message, { status: 500 });
+      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
     }
   }
 };
