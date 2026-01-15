@@ -1,66 +1,70 @@
-var worker_default = {
-  async getSettings(env) {
-    return {
-      WEBHOOK_SECRET: "RICHARD_SECRET_123",
-      BASE_URL: "https://script.google.com/macros/s/AKfycbzq66GAz2wKeySUopH44eVcEtQwfi2fhYKRXsppxKQLeh8vIv7FfSvZSbRCwlT1_WcE/exec",
-      // Rotates keys to prevent individual key exhaustion
-      TORN_KEYS: ["gc43XVxOpCcwLnY6", "rKP5EwA6DmSufqEm", "8YgzsJntLW3yTboP", "fiwzsFpv7BuGuTH3", "3grddfsZEZsTlWBp", "RQmyHvIAIuJ2iCZX"],
-      TS_KEY: env.TORN_STATS_KEY || "", 
-      YATA_KEY: env.YATA_KEY || ""
-    };
-  },
-
+export default {
   async fetch(request, env) {
-    const settings = await this.getSettings(env);
     const url = new URL(request.url);
-    const corsHeaders = {
+    const { searchParams } = url;
+
+    // --- CONFIG & KEYS ---
+    const TORN_KEYS = [
+      "gc43XVxOpCcwLnY6","rKP5EwA6DmSufqEm","8YgzsJntLW3yTboP",
+      "fiwzsFpv7BuGuTH3","3grddfsZEZsTlWBp","RQmyHvIAIuJ2iCZX",
+      "rwLgZTyqgWDxhoCx","CZP2D2ZnbXWsYiDT","5zgirNZtPxRdeFFL",
+      "C9cgPgQFpGzA6n32","sUMyDEhMUi3kNgY7","UO429efUvPIQW5Zq"
+    ];
+    
+    const headers = {
+      "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Content-Type": "application/json"
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "*"
     };
 
-    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+    if (request.method === "OPTIONS") return new Response(null, { headers });
 
-    // --- HUD GET HANDLER (New Logic) ---
-    if (request.method === "GET" && url.searchParams.has("fac")) {
-      const facId = url.searchParams.get("fac");
-      const randomKey = settings.TORN_KEYS[Math.floor(Math.random() * settings.TORN_KEYS.length)];
-      
+    // --- 1. HUD GET HANDLER (FACTION COMPARISON) ---
+    // Triggered when the HUD sends ?fac=ID
+    if (request.method === "GET" && searchParams.has("fac")) {
+      const facId = searchParams.get("fac");
+      if (!/^\d+$/.test(facId)) return new Response(JSON.stringify({ error: "Invalid ID" }), { status: 400, headers });
+
       try {
-        const tornRes = await fetch(`https://api.torn.com/faction/${facId}?selections=&key=${randomKey}`);
-        const tornData = await tornRes.json();
-        if (!tornData.members) throw new Error("Invalid Faction ID");
-
-        const members = Object.entries(tornData.members);
+        // Fetch the live roster from Torn using key rotation
+        const tornData = await this.fetchTornRotated(facId, TORN_KEYS, env.ROTATOR);
+        const members = Object.entries(tornData.members || {});
+        
+        // Match every faction member against our local KV Vault
         const results = await Promise.all(members.map(async ([id, m]) => {
-          // Cross-reference with your SPY_VAULT KV
-          const spyData = await env.SPY_VAULT.get(id, { type: "json" });
+          const spyData = await env.ROTATOR.get(`spy_${id}`, { type: "json" });
           return {
-            id: id,
+            id,
             name: m.name,
             level: m.level,
             status: m.status.description,
-            total: spyData ? spyData.total : 0
+            // If match found in KV, provide stats; otherwise return 0
+            total: spyData ? spyData.total : 0,
+            strength: spyData ? spyData.strength : 0,
+            defense: spyData ? spyData.defense : 0,
+            speed: spyData ? spyData.speed : 0,
+            dexterity: spyData ? spyData.dexterity : 0
           };
         }));
 
-        return new Response(JSON.stringify({ factionName: tornData.name, members: results }), { headers: corsHeaders });
+        return new Response(JSON.stringify({ factionName: tornData.name, members: results }), { headers });
       } catch (e) {
-        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
+        return new Response(JSON.stringify({ error: "API_FAILURE", details: e }), { status: 502, headers });
       }
     }
 
-    // --- SPY VAULT IMPORT (Consolidated) ---
-    if (request.method === "POST" && !url.searchParams.has("mode")) {
-      const body = await request.json();
-      const spies = body.spies || body; // Handles batch from Google Script
-      let count = 0;
-
-      for (const spy of spies) {
-        const id = (spy.player_id || spy.user_id || spy.id).toString();
-        if (id) {
-          await env.SPY_VAULT.put(id, JSON.stringify({
+    // --- 2. SPY VAULT POST (AUTOMATED IMPORT) ---
+    // Triggered by your Apps Script daily sync
+    if (request.method === "POST") {
+      try {
+        const body = await request.json();
+        const spies = body.spies || body;
+        let count = 0;
+        for (const spy of spies) {
+          const id = (spy.player_id || spy.user_id || spy.id).toString();
+          // Store data with 'spy_' prefix to differentiate from 'idx' key
+          await env.ROTATOR.put(`spy_${id}`, JSON.stringify({
             name: spy.player_name || spy.name,
             total: spy.total || 0,
             strength: spy.strength || 0,
@@ -71,23 +75,29 @@ var worker_default = {
           }));
           count++;
         }
+        return new Response(JSON.stringify({ success: true, added: count }), { headers });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
       }
-      return new Response(JSON.stringify({ success: true, count: count }), { headers: corsHeaders });
     }
 
-    // --- MARKET RELAY LOGIC (Your Existing Code) ---
-    if (request.method === "POST" && url.searchParams.get("mode") === "market") {
-      const body = await request.json();
-      const res = await fetch(settings.BASE_URL + "?key=" + settings.WEBHOOK_SECRET, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
-      return new Response(await res.text(), { headers: corsHeaders });
-    }
+    return new Response(JSON.stringify({ status: "Tactical Bridge Online" }), { headers });
+  },
 
-    return new Response(JSON.stringify({ status: "Tactical Bridge Online" }), { headers: corsHeaders });
+  // --- HELPER: KEY ROTATION ---
+  async fetchTornRotated(factionId, keys, KV) {
+    const v = await KV.get("idx");
+    let idx = v ? parseInt(v, 10) : 0;
+    for (let i = 0; i < keys.length; i++) {
+      const currentIdx = (idx + i) % keys.length;
+      const key = keys[currentIdx];
+      const r = await fetch(`https://api.torn.com/faction/${factionId}?selections=&key=${key}`);
+      const data = await r.json();
+      if (!data.error) {
+        await KV.put("idx", String(currentIdx)); // Save current key index
+        return data;
+      }
+    }
+    throw "ALL_KEYS_FAILED";
   }
 };
-
-export { worker_default as default };
