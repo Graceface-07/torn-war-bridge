@@ -3,6 +3,7 @@ export default {
     const headers = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
     
     try {
+      // Fetching TS data to check volume
       const tsRes = await fetch(`https://www.tornstats.com/api/v2/${env.TS_KEY}/spies`);
       const tsData = await tsRes.json();
       
@@ -11,7 +12,7 @@ export default {
       return new Response(JSON.stringify({
         source: "Torn Stats",
         record_count: tsCount,
-        status: "Read-only check successful"
+        status: "Read-only volume check complete"
       }), { headers });
 
     } catch (e) {
