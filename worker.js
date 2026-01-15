@@ -8,54 +8,80 @@ export default {
       "Access-Control-Allow-Headers": "Content-Type",
       "Content-Type": "application/json"
     };
+
     if (method === "OPTIONS") return new Response(null, { headers });
+
     try {
-      if (method === "POST") {
-        const body = await request.json();
-        if (Array.isArray(body)) {
-          for (const spy of body) {
-            await env.ROTATOR.put(`spy_${spy.id}`, JSON.stringify(spy));
+      if (method === "POST" && url.searchParams.get("mode") === "global_sync") {
+        let tsCount = 0;
+        let yataCount = 0;
+
+        // 1. TORN STATS BULK (Full stats included in their export)
+        const tsRes = await fetch(`https://www.tornstats.com/api/v2/${env.TS_KEY}/spies`);
+        const tsData = await tsRes.json();
+        
+        if (tsData.status && tsData.spies) {
+          for (const [id, s] of Object.entries(tsData.spies)) {
+            const payload = {
+              total: s.total || 0,
+              strength: s.strength || 0,
+              defense: s.defense || 0,
+              speed: s.speed || 0,
+              dexterity: s.dexterity || 0,
+              timestamp: s.timestamp || Math.floor(Date.now() / 1000),
+              source: "ts"
+            };
+            await env.ROTATOR.put(`spy_${id}`, JSON.stringify(payload));
+            tsCount++;
           }
-          return new Response(JSON.stringify({ success: true, count: body.length }), { headers });
         }
-        await env.ROTATOR.put(`spy_${body.id}`, JSON.stringify(body));
-        return new Response(JSON.stringify({ success: true }), { headers });
+
+        // 2. YATA BULK (Full stats included in export)
+        const yataRes = await fetch(`https://yata.yt/api/v1/spies/?key=${env.YATA_KEY}`);
+        const yataData = await yataRes.json();
+        
+        if (yataData.spies) {
+          for (const [id, s] of Object.entries(yataData.spies)) {
+            const payload = {
+              total: s.total || 0,
+              strength: s.strength || 0,
+              defense: s.defense || 0,
+              speed: s.speed || 0,
+              dexterity: s.dexterity || 0,
+              timestamp: s.timestamp || Math.floor(Date.now() / 1000),
+              source: "yata"
+            };
+            await env.ROTATOR.put(`spy_${id}`, JSON.stringify(payload));
+            yataCount++;
+          }
+        }
+
+        return new Response(JSON.stringify({ success: true, ts: tsCount, yata: yataCount }), { headers });
       }
+
+      // --- HUD GET HANDLER (Now returns full objects) ---
       const idParam = url.searchParams.get("id");
-      const forceUpdate = url.searchParams.get("update") === "true";
       if (!idParam) return new Response("Missing ID", { status: 400, headers });
+
       const tornRes = await fetch(`https://api.torn.com/faction/${idParam}?selections=basic&key=${env.TORN_KEY}`);
       const tornData = await tornRes.json();
       const membersList = [];
-      const memberIds = Object.keys(tornData.members);
-      for (let i = 0; i < memberIds.length; i++) {
-        const id = memberIds[i];
+
+      for (const id of Object.keys(tornData.members)) {
         const m = tornData.members[id];
-        let spy = await env.ROTATOR.get(`spy_${id}`, { type: "json" });
-        if (!spy && forceUpdate && i < 40) { 
-          const tsRes = await fetch(`https://www.tornstats.com/api/v2/${env.TS_KEY}/spy/user/${id}`);
-          const tsData = await tsRes.json();
-          if (tsData.status && tsData.spy) {
-            spy = { 
-              id: id,
-              name: m.name,
-              total: tsData.spy.total,
-              strength: tsData.spy.strength,
-              defense: tsData.spy.defense,
-              speed: tsData.spy.speed,
-              dexterity: tsData.spy.dexterity,
-              last_updated: new Date().toLocaleDateString()
-            };
-            await env.ROTATOR.put(`spy_${id}`, JSON.stringify(spy));
-          }
-        }
+        const spy = await env.ROTATOR.get(`spy_${id}`, { type: "json" });
+        
         membersList.push({
-          id, name: m.name, level: m.level, 
-          status_desc: m.status.description, 
-          total: spy ? spy.total : 0 
+          id, 
+          name: m.name, 
+          level: m.level, 
+          status: m.status.description, 
+          spyData: spy || null // This now contains all 4 stats + total
         });
       }
-      return new Response(JSON.stringify({ faction: { name: tornData.name }, members: membersList }), { headers });
+
+      return new Response(JSON.stringify({ faction: tornData.name, members: membersList }), { headers });
+
     } catch (e) {
       return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
     }
