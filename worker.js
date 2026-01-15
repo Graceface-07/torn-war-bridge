@@ -1,86 +1,93 @@
-export default {
+var worker_default = {
+  async getSettings(env) {
+    return {
+      WEBHOOK_SECRET: "RICHARD_SECRET_123",
+      BASE_URL: "https://script.google.com/macros/s/AKfycbzq66GAz2wKeySUopH44eVcEtQwfi2fhYKRXsppxKQLeh8vIv7FfSvZSbRCwlT1_WcE/exec",
+      // Rotates keys to prevent individual key exhaustion
+      TORN_KEYS: ["gc43XVxOpCcwLnY6", "rKP5EwA6DmSufqEm", "8YgzsJntLW3yTboP", "fiwzsFpv7BuGuTH3", "3grddfsZEZsTlWBp", "RQmyHvIAIuJ2iCZX"],
+      TS_KEY: env.TORN_STATS_KEY || "", 
+      YATA_KEY: env.YATA_KEY || ""
+    };
+  },
+
   async fetch(request, env) {
-    const headers = { 
-      "Content-Type": "application/json", 
+    const settings = await this.getSettings(env);
+    const url = new URL(request.url);
+    const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type"
+      "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Content-Type": "application/json"
     };
 
-    if (request.method === "OPTIONS") return new Response(null, { headers });
+    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-    const url = new URL(request.url);
-    const TORN_API_KEY = "YOUR_PUBLIC_TORN_KEY"; // Need a basic key for live roster
-
-    // --- GET HANDLER: For the HUD ---
-    if (request.method === "GET") {
+    // --- HUD GET HANDLER (New Logic) ---
+    if (request.method === "GET" && url.searchParams.has("fac")) {
       const facId = url.searchParams.get("fac");
-      if (!facId) return new Response("Missing fac ID", { status: 400, headers });
-
+      const randomKey = settings.TORN_KEYS[Math.floor(Math.random() * settings.TORN_KEYS.length)];
+      
       try {
-        // 1. Fetch live roster from Torn
-        const tornRes = await fetch(`https://api.torn.com/faction/${facId}?selections=&key=${TORN_API_KEY}`);
+        const tornRes = await fetch(`https://api.torn.com/faction/${facId}?selections=&key=${randomKey}`);
         const tornData = await tornRes.json();
-        
-        if (!tornData.members) throw new Error("Invalid Faction ID or API Key");
+        if (!tornData.members) throw new Error("Invalid Faction ID");
 
         const members = Object.entries(tornData.members);
-        
-        // 2. Decorate members with KV stats
         const results = await Promise.all(members.map(async ([id, m]) => {
-          const spyData = await env.ROTATOR.get(`spy_${id}`, { type: "json" });
+          // Cross-reference with your SPY_VAULT KV
+          const spyData = await env.SPY_VAULT.get(id, { type: "json" });
           return {
             id: id,
             name: m.name,
             level: m.level,
             status: m.status.description,
-            total: spyData ? spyData.total : 0,
-            strength: spyData ? spyData.strength : 0,
-            defense: spyData ? spyData.defense : 0,
-            speed: spyData ? spyData.speed : 0,
-            dexterity: spyData ? spyData.dexterity : 0
+            total: spyData ? spyData.total : 0
           };
         }));
 
-        return new Response(JSON.stringify({
-          factionName: tornData.name,
-          members: results
-        }), { headers });
-
+        return new Response(JSON.stringify({ factionName: tornData.name, members: results }), { headers: corsHeaders });
       } catch (e) {
-        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
+        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
       }
     }
 
-    // --- POST HANDLER: For the Automated Import ---
-    if (request.method === "POST") {
-      try {
-        const body = await request.json();
-        const data = body.spies || body; // Support both wrapped and unwrapped JSON
-        let added = 0;
+    // --- SPY VAULT IMPORT (Consolidated) ---
+    if (request.method === "POST" && !url.searchParams.has("mode")) {
+      const body = await request.json();
+      const spies = body.spies || body; // Handles batch from Google Script
+      let count = 0;
 
-        for (const player of data) {
-          const id = player.player_id || player.user_id; // Support different JSON keys
-          const key = `spy_${id}`;
-          const value = JSON.stringify({
-            name: player.player_name || player.name,
-            faction: player.player_faction || player.faction,
-            strength: player.strength,
-            defense: player.defense,
-            speed: player.speed,
-            dexterity: player.dexterity,
-            total: player.total,
-            timestamp: player.timestamp
-          });
-
-          await env.ROTATOR.put(key, value);
-          added++;
+      for (const spy of spies) {
+        const id = (spy.player_id || spy.user_id || spy.id).toString();
+        if (id) {
+          await env.SPY_VAULT.put(id, JSON.stringify({
+            name: spy.player_name || spy.name,
+            total: spy.total || 0,
+            strength: spy.strength || 0,
+            defense: spy.defense || 0,
+            speed: spy.speed || 0,
+            dexterity: spy.dexterity || 0,
+            timestamp: spy.timestamp || Date.now()
+          }));
+          count++;
         }
-
-        return new Response(JSON.stringify({ success: true, added }), { headers });
-      } catch (e) {
-        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
       }
+      return new Response(JSON.stringify({ success: true, count: count }), { headers: corsHeaders });
     }
+
+    // --- MARKET RELAY LOGIC (Your Existing Code) ---
+    if (request.method === "POST" && url.searchParams.get("mode") === "market") {
+      const body = await request.json();
+      const res = await fetch(settings.BASE_URL + "?key=" + settings.WEBHOOK_SECRET, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      return new Response(await res.text(), { headers: corsHeaders });
+    }
+
+    return new Response(JSON.stringify({ status: "Tactical Bridge Online" }), { headers: corsHeaders });
   }
-}
+};
+
+export { worker_default as default };
