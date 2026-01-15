@@ -1,32 +1,44 @@
 export default {
   async fetch(request, env) {
-    const headers = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
-    
-    try {
-      const tsRes = await fetch(`https://www.tornstats.com/api/v2/${env.TS_KEY}/spies`, {
-        headers: { "User-Agent": "TornWarBridge-Worker" }
-      });
-      
-      const text = await tsRes.text(); // Get raw text first to check if it's HTML
-      
-      if (text.startsWith("<!DOCTYPE")) {
-        return new Response(JSON.stringify({ 
-          error: "Torn Stats returned HTML instead of data.",
-          preview: text.substring(0, 100) 
-        }), { status: 500, headers });
+    const headers = { 
+      "Content-Type": "application/json", 
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type"
+    };
+
+    if (request.method === "OPTIONS") return new Response(null, { headers });
+
+    if (request.method === "POST") {
+      try {
+        const data = await request.json();
+        let added = 0;
+
+        for (const player of data) {
+          // Mapping your JSON format to KV storage
+          const key = `spy_${player.player_id}`;
+          const value = JSON.stringify({
+            name: player.player_name,
+            level: player.player_level,
+            faction: player.player_faction,
+            strength: player.strength,
+            defense: player.defense,
+            speed: player.speed,
+            dexterity: player.dexterity,
+            total: player.total,
+            timestamp: player.timestamp
+          });
+
+          await env.ROTATOR.put(key, value);
+          added++;
+        }
+
+        return new Response(JSON.stringify({ success: true, added }), { headers });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
       }
-
-      const tsData = JSON.parse(text);
-      const tsCount = Object.keys(tsData.spies || {}).length;
-
-      return new Response(JSON.stringify({
-        source: "Torn Stats",
-        record_count: tsCount,
-        status: "Read-only check successful"
-      }), { headers });
-
-    } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
     }
+
+    return new Response("Worker is ready for JSON upload.", { headers });
   }
-};
+}
