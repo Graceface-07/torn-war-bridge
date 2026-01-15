@@ -13,7 +13,7 @@ export default {
         const tsRes = await fetch(`https://www.tornstats.com/api/v2/${env.TS_KEY}/spies`);
         const tsData = await tsRes.json();
         
-        const yataRes = await fetch(`https://yata.yt/api/v1/spies/?key=${env.YATA_KEY}`);
+        const yataRes = await fetch(`https://yata.yt/api/v1/spies/?key=${env.YATA}`);
         const yataData = await yataRes.json();
 
         // Combine all unique IDs
