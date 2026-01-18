@@ -28,10 +28,8 @@ export default {
         if (list.list_complete) break;
         cursor = list.cursor;
       }
-
       const now = Date.now();
       const recent = allKeys.filter(k => k.metadata && (now - k.metadata.lastUpdated) < 86400000);
-
       return new Response(JSON.stringify({
         total_spies_in_db: allKeys.length,
         updated_recently: recent.length,
@@ -45,7 +43,6 @@ export default {
         const body = await request.json();
         const spies = body.spies || [];
         const now = Date.now();
-
         await Promise.all(spies.map(spy => {
           const id = (spy.player_id || spy.user_id || spy.id).toString();
           return env.ROTATOR.put(`spy_${id}`, JSON.stringify({
@@ -57,21 +54,20 @@ export default {
             dexterity: spy.dexterity || 0
           }), { metadata: { lastUpdated: now } });
         }));
-
         return new Response(JSON.stringify({ success: true, count: spies.length }), { headers });
       } catch (e) {
         return new Response(JSON.stringify({ error: e.message }), { status: 500, headers });
       }
     }
 
-    // --- HUD: INDIVIDUAL SPY CHECK ---
+    // --- HUD: INDIVIDUAL SPY CHECK (STATS FROM KV) ---
     if (url.searchParams.has("check")) {
       const id = url.searchParams.get("check");
       const spy = await env.ROTATOR.get(`spy_${id}`, { type: "json" });
       return new Response(JSON.stringify(spy || { error: "NOT_FOUND" }), { headers });
     }
 
-    // --- HUD: FACTION DATA FETCH ---
+    // --- HUD: FACTION DATA FETCH (LIVE STATUS/TIMERS FROM TORN) ---
     if (url.searchParams.has("fac")) {
       const facId = url.searchParams.get("fac");
       const v = await env.ROTATOR.get("idx");
@@ -79,7 +75,10 @@ export default {
       
       for (let i = 0; i < TORN_KEYS.length; i++) {
         const currentIdx = (idx + i) % TORN_KEYS.length;
-        const res = await fetch(`https://api.torn.com/faction/${facId}?selections=&key=${TORN_KEYS[currentIdx]}`);
+        // Selection updated to basic to include 'status' and 'map'
+        const res = await fetch(`https://api.torn.com/faction/${facId}?selections=basic&key=${TORN_KEYS[currentIdx]}`, {
+            headers: { "Cache-Control": "no-cache" }
+        });
         const data = await res.json();
         if (data && !data.error) {
           await env.ROTATOR.put("idx", String(currentIdx));
