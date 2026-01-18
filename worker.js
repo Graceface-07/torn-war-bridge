@@ -1,6 +1,5 @@
 export default {
   async fetch(request, env) {
-    // 1. CONSOLIDATED CORS & KEYS
     const TORN_KEYS = [
       "gc43XVxOpCcwLnY6", "rKP5EwA6DmSufqEm", "8YgzsJntLW3yTboP",
       "fiwzsFpv7BuGuTH3", "3grddfsZEZsTlWBp", "RQmyHvIAIuJ2iCZX",
@@ -20,7 +19,6 @@ export default {
     const url = new URL(request.url);
 
     try {
-      // 2. RESTORED: PAGINATED STATUS AUDIT (Metadata Check)
       if (url.searchParams.has("status")) {
         let allKeys = [];
         let cursor = "";
@@ -39,7 +37,6 @@ export default {
         }), { headers });
       }
 
-      // 3. DATA IMPORT (Parallel processing with metadata)
       if (request.method === "POST") {
         const body = await request.json();
         const spies = body.spies || [];
@@ -58,14 +55,12 @@ export default {
         return new Response(JSON.stringify({ success: true, count: spies.length }), { headers });
       }
 
-      // 4. HUD: INDIVIDUAL SPY CHECK
       if (url.searchParams.has("check")) {
         const id = url.searchParams.get("check");
         const spy = await env.ROTATOR.get(`spy_${id}`, { type: "json" });
         return new Response(JSON.stringify(spy || { error: "NOT_FOUND" }), { headers });
       }
 
-      // 5. HUD: FACTION DATA FETCH (Updated to selections=basic)
       if (url.searchParams.has("fac")) {
         const facId = url.searchParams.get("fac");
         const v = await env.ROTATOR.get("idx");
@@ -89,6 +84,6 @@ export default {
       return new Response(JSON.stringify({ error: "WORKER_EXCEPTION", message: e.message }), { headers });
     }
 
-    return new Response(JSON.stringify({ status: "BRIDGE_ONLINE" }), { headers });
+    return new Response(JSON.stringify({ message: "BRIDGE_ONLINE" }), { headers });
   }
 };
