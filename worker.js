@@ -1,5 +1,12 @@
 export default {
   async fetch(request, env) {
+    const TORN_KEYS = [
+      "gc43XVxOpCcwLnY6", "rKP5EwA6DmSufqEm", "8YgzsJntLW3yTboP",
+      "fiwzsFpv7BuGuTH3", "3grddfsZEZsTlWBp", "RQmyHvIAIuJ2iCZX",
+      "rwLgZTyqgWDxhoCx", "CZP2D2ZnbXWsYiDT", "5zgirNZtPxRdeFFL",
+      "C9cgPgQFpGzA6n32", "sUMyDEhMUi3kNgY7", "UO429efUvPIQW5Zq"
+    ];
+
     const headers = {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
@@ -11,25 +18,34 @@ export default {
 
     const url = new URL(request.url);
 
-    // --- STATUS CHECK ---
+    // --- ACCURATE STATUS CHECK (PAGINATED) ---
     if (url.searchParams.has("status")) {
-      const list = await env.ROTATOR.list();
+      let allKeys = [];
+      let cursor = "";
+      while (true) {
+        const list = await env.ROTATOR.list({ cursor: cursor });
+        allKeys.push(...list.keys);
+        if (list.list_complete) break;
+        cursor = list.cursor;
+      }
+
       const now = Date.now();
-      const recent = list.keys.filter(k => k.metadata && (now - k.metadata.lastUpdated) < 86400000);
+      const recent = allKeys.filter(k => k.metadata && (now - k.metadata.lastUpdated) < 86400000);
+
       return new Response(JSON.stringify({
-        total_spies_in_db: list.keys.length,
-        updated_recently: recent.length
+        total_spies_in_db: allKeys.length,
+        updated_recently: recent.length,
+        status: "BRIDGE_ONLINE"
       }), { headers });
     }
 
-    // --- DATA IMPORT (Optimized for CPU Limits) ---
+    // --- DATA IMPORT (Parallel Processing) ---
     if (request.method === "POST") {
       try {
         const body = await request.json();
         const spies = body.spies || [];
         const now = Date.now();
 
-        // Process in parallel to save CPU cycles
         await Promise.all(spies.map(spy => {
           const id = (spy.player_id || spy.user_id || spy.id).toString();
           return env.ROTATOR.put(`spy_${id}`, JSON.stringify({
@@ -48,9 +64,29 @@ export default {
       }
     }
 
-    // --- HUD DATA FETCH (Standard Logic) ---
-    if (url.searchParams.has("fac") || url.searchParams.has("check")) {
-      // ... (HUD logic remains the same as previous stable versions)
+    // --- HUD: INDIVIDUAL SPY CHECK ---
+    if (url.searchParams.has("check")) {
+      const id = url.searchParams.get("check");
+      const spy = await env.ROTATOR.get(`spy_${id}`, { type: "json" });
+      return new Response(JSON.stringify(spy || { error: "NOT_FOUND" }), { headers });
+    }
+
+    // --- HUD: FACTION DATA FETCH ---
+    if (url.searchParams.has("fac")) {
+      const facId = url.searchParams.get("fac");
+      const v = await env.ROTATOR.get("idx");
+      let idx = v ? parseInt(v, 10) : 0;
+      
+      for (let i = 0; i < TORN_KEYS.length; i++) {
+        const currentIdx = (idx + i) % TORN_KEYS.length;
+        const res = await fetch(`https://api.torn.com/faction/${facId}?selections=&key=${TORN_KEYS[currentIdx]}`);
+        const data = await res.json();
+        if (data && !data.error) {
+          await env.ROTATOR.put("idx", String(currentIdx));
+          return new Response(JSON.stringify(data), { headers });
+        }
+      }
+      return new Response(JSON.stringify({ error: "KEYS_EXHAUSTED" }), { headers });
     }
 
     return new Response(JSON.stringify({ message: "BRIDGE_ONLINE" }), { headers });
