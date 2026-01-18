@@ -19,6 +19,7 @@ export default {
     const url = new URL(request.url);
 
     try {
+      // --- 1. ACCURATE STATUS CHECK (PAGINATED AUDIT) ---
       if (url.searchParams.has("status")) {
         let allKeys = [];
         let cursor = "";
@@ -37,6 +38,7 @@ export default {
         }), { headers });
       }
 
+      // --- 2. DATA IMPORT (PARALLEL PROCESSING WITH METADATA) ---
       if (request.method === "POST") {
         const body = await request.json();
         const spies = body.spies || [];
@@ -55,13 +57,14 @@ export default {
         return new Response(JSON.stringify({ success: true, count: spies.length }), { headers });
       }
 
+      // --- 3. HUD: INDIVIDUAL SPY CHECK ---
       if (url.searchParams.has("check")) {
         const id = url.searchParams.get("check");
         const spy = await env.ROTATOR.get(`spy_${id}`, { type: "json" });
         return new Response(JSON.stringify(spy || { error: "NOT_FOUND" }), { headers });
       }
 
-     // --- HUD: FACTION DATA FETCH (RESTORED TO PREVIOUS WORKING LOGIC) ---
+      // --- 4. HUD: FACTION DATA FETCH (THE MAGIC FIX) ---
       if (url.searchParams.has("fac")) {
         const facId = url.searchParams.get("fac");
         const v = await env.ROTATOR.get("idx");
@@ -69,20 +72,18 @@ export default {
         
         for (let i = 0; i < TORN_KEYS.length; i++) {
           const currentIdx = (idx + i) % TORN_KEYS.length;
-          // Use the empty selection from your previous working file
+          // RESTORED: Empty selections and cache-control bust
           const res = await fetch(`https://api.torn.com/faction/${facId}?selections=&key=${TORN_KEYS[currentIdx]}`, {
             headers: { "Cache-Control": "no-cache" }
           });
-          
           const data = await res.json();
           
-          // Use the broad name check from your previous fix
+          // RESTORED: Dual-name check for 'Unknown Faction' fix
           const factionName = data.name || data.faction_name;
           
           if (data && factionName) {
             await env.ROTATOR.put("idx", String(currentIdx));
-            // Explicitly ensure the name is present for the HUD
-            data.name = factionName; 
+            data.name = factionName; // Force the name for the HUD
             return new Response(JSON.stringify(data), { headers });
           }
         }
