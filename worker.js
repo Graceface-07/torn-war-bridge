@@ -61,6 +61,7 @@ export default {
         return new Response(JSON.stringify(spy || { error: "NOT_FOUND" }), { headers });
       }
 
+     // --- HUD: FACTION DATA FETCH (RESTORED TO PREVIOUS WORKING LOGIC) ---
       if (url.searchParams.has("fac")) {
         const facId = url.searchParams.get("fac");
         const v = await env.ROTATOR.get("idx");
@@ -68,12 +69,20 @@ export default {
         
         for (let i = 0; i < TORN_KEYS.length; i++) {
           const currentIdx = (idx + i) % TORN_KEYS.length;
-          const res = await fetch(`https://api.torn.com/faction/${facId}?selections=basic&key=${TORN_KEYS[currentIdx]}`, {
+          // Use the empty selection from your previous working file
+          const res = await fetch(`https://api.torn.com/faction/${facId}?selections=&key=${TORN_KEYS[currentIdx]}`, {
             headers: { "Cache-Control": "no-cache" }
           });
+          
           const data = await res.json();
-          if (data && !data.error) {
+          
+          // Use the broad name check from your previous fix
+          const factionName = data.name || data.faction_name;
+          
+          if (data && factionName) {
             await env.ROTATOR.put("idx", String(currentIdx));
+            // Explicitly ensure the name is present for the HUD
+            data.name = factionName; 
             return new Response(JSON.stringify(data), { headers });
           }
         }
