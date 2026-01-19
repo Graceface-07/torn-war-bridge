@@ -1,34 +1,6 @@
-async function sendSpiesData(spies) {
-  try {
-    const response = await fetch("https://torn-war-bridge.tmecf.workers.dev/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ spies })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Worker error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log("Worker response:", data);
-    return data;
-  } catch (err) {
-    console.error("Failed to send spies data:", err);
-    return null;
-  }
-}
-
-// Example usage:
-const mySpies = [
-  { player_id: 12345, name: "Spy A", strength: 10, defense: 12, speed: 8, dexterity: 9, total: 39 },
-  { player_id: 67890, name: "Spy B", strength: 15, defense: 11, speed: 10, dexterity: 12, total: 48 }
-];
-
-{}
-
+export default {
+  async fetch(request, env) {
+    // Only allow POST
     if (request.method !== "POST") {
       return new Response(JSON.stringify({ error: "POST only" }), {
         status: 405,
@@ -68,12 +40,13 @@ const mySpies = [
               updated: Date.now()
             })
           );
+
           written++;
 
           if (written % 50 === 0) {
             progress.push({ written });
           }
-        } catch {
+        } catch (err) {
           failed++;
         }
       }
@@ -96,4 +69,5 @@ const mySpies = [
         }
       }
     );
-  
+  }
+};
