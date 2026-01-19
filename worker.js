@@ -6,77 +6,39 @@ export default {
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "*"
     };
-
+    
     if (request.method === "OPTIONS") return new Response(null, { headers });
-
+    
     try {
-      const url = new URL(request.url);
-      const FF_KEY = "rwLgZTyqgWDxhoCx";
-
-      if (url.searchParams.has("check")) {
-        // fetch from KV
-        const spy = await env.ROTATOR.get(`spy_${url.searchParams.get("check")}`, { type: "json" });
-        return new Response(JSON.stringify(spy || { error: "NOT_FOUND" }), { headers });
-      }
-
       if (request.method === "POST") {
         const body = await request.json();
+        const attacker = body.attacker || { total: 0 };
+        const targets = body.targets || [];
 
-        // If spies data sent -> push to KV
-        if (body.spies && Array.isArray(body.spies)) {
-          const now = Date.now();
-          await Promise.all(body.spies.map(s => 
-            env.ROTATOR.put(`spy_${s.player_id}`, JSON.stringify(s), { metadata: { lastUpdated: now } })
-          ));
-          return new Response(JSON.stringify({ success: true, count: body.spies.length }), { headers });
-        }
+        // For each target, try KV first, fallback to FF Scouter stats
+        const scoredTargets = await Promise.all(targets.map(async t => {
+          // Try KV
+          const kv = await env.ROTATOR.get(`spy_${t.player_id}`, { type: "json" }) || {};
+          const ff = t.ff || kv.ff || 0;
+          const totalStats = kv.total || t.total || 0;
+          const score = totalStats + ff * 100; // simple scoring formula
+          return {
+            player_id: t.player_id,
+            name: t.name || kv.name || "Unknown",
+            score,
+            total: totalStats
+          };
+        }));
 
-        // If attacker + targets sent -> calculate recommendations
-        if (body.attacker && body.targets) {
-          const attacker = body.attacker;
-          const faction_context = body.faction_context || {};
-          const scoredTargets = [];
+        // Sort by score descending, pick top 3
+        const top_3_targets = scoredTargets.sort((a,b)=>b.score - a.score).slice(0,3);
 
-          for (let t of body.targets) {
-            // Try KV first
-            let kvData = await env.ROTATOR.get(`spy_${t.player_id}`, { type: "json" });
-
-            // If KV empty -> fallback to FF Scouter
-            if (!kvData) {
-              try {
-                const ffRes = await fetch(`https://ffscouter.com/api/v1/get-stats?key=${FF_KEY}&targets=${t.player_id}&user_id=${t.user_id||0}`);
-                const ffJson = await ffRes.json();
-                if (ffJson && ffJson[0]) {
-                  kvData = {
-                    name: ffJson[0].name || "Unknown",
-                    total: ffJson[0].bs_estimate_human || 0,
-                    strength: 0,
-                    defense: 0,
-                    speed: 0,
-                    dexterity: 0,
-                    ff: ffJson[0].fair_fight,
-                    respect: ffJson[0].respect || 0
-                  };
-                }
-              } catch(e) { kvData = { total:0, ff:0, respect:0, name:"Unknown" }; }
-            }
-
-            // Simple scoring: KV total if available, otherwise FF estimate * FF factor + respect
-            const score = (kvData.total || 0) + ((kvData.ff||0) * 10) + (kvData.respect||0);
-            scoredTargets.push({ player_id: t.player_id, name: kvData.name, score, ff: kvData.ff, respect: kvData.respect });
-          }
-
-          // Sort descending
-          scoredTargets.sort((a,b)=>b.score-a.score);
-
-          return new Response(JSON.stringify({ top_3_targets: scoredTargets.slice(0,3) }), { headers });
-        }
+        return new Response(JSON.stringify({ top_3_targets }), { headers });
       }
-
-    } catch(e) {
+    } catch(e){
       return new Response(JSON.stringify({ error: e.message }), { headers });
     }
 
-    return new Response(JSON.stringify({ status: "BRIDGE_ONLINE" }), { headers });
+    return new Response(JSON.stringify({ status: "Worker Online" }), { headers });
   }
 };
