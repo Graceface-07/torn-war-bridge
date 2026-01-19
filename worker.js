@@ -2,39 +2,55 @@ const FF_SCOUTER_KEY = "rwLgZTyqgWDxhoCx";
 
 export default {
   async fetch(request, env) {
-    if(request.method !== "POST") return new Response("Use POST", {status:405});
+    const url = new URL(request.url);
+    const checkId = url.searchParams.get("check");
 
-    const payload = await request.json();
-    const { attacker, targets } = payload;
+    if (!checkId) {
+      return new Response(JSON.stringify({ error: "Missing check parameter" }), {
+        headers: { "Content-Type": "application/json" },
+        status: 400
+      });
+    }
 
-    // Score each target
-    const scoredTargets = await Promise.all(targets.map(async t => {
-      let ffStats = null;
+    try {
+      const ffRes = await fetch(
+        "https://ffscouter.com/api/v1/get-stats?key=" +
+          FF_SCOUTER_KEY +
+          "&targets=" +
+          checkId +
+          "&user_id=0"
+      );
 
-      // Fetch FF Scouter stats
-      try {
-        const res = await fetch(`https://ffscouter.com/api/v1/get-stats?key=${FF_SCOUTER_KEY}&targets=${t.player_id}&user_id=0`);
-        const data = await res.json();
-        if(data && data[0]){
-          ffStats = data[0];
-          t.total = ffStats.fair_fight*100; // scale for scoring
+      const ffData = await ffRes.json();
+
+      if (!ffData || !ffData[0]) {
+        return new Response(JSON.stringify({}), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      const ff = ffData[0];
+
+      return new Response(
+        JSON.stringify({
+          fair_fight: ff.fair_fight || 0,
+          respect: ff.respect || 0,
+          estimate: ff.estimate || "?",
+          total: Math.round((ff.fair_fight || 1) * 1000),
+          strength: 0,
+          defense: 0,
+          speed: 0,
+          dexterity: 0
+        }),
+        {
+          headers: { "Content-Type": "application/json" }
         }
-      } catch(e){ /* fallback to dummy */ }
-
-      // If no FF stats, ensure dummy stats exist
-      if(!t.total) t.total = Math.floor(Math.random()*1000+500);
-
-      // Score = total + strength + defense + speed + dexterity
-      t.score = t.total + (t.strength||0) + (t.defense||0) + (t.speed||0) + (t.dexterity||0);
-
-      return t;
-    }));
-
-    // Sort descending and pick top 3
-    scoredTargets.sort((a,b)=>b.score - a.score);
-
-    return new Response(JSON.stringify({ top_3_targets: scoredTargets.slice(0,3) }), {
-      headers: { "Content-Type": "application/json" }
-    });
+      );
+    } catch (e) {
+      return new Response(JSON.stringify({ error: "Fetch failed" }), {
+        headers: { "Content-Type": "application/json" },
+        status: 500
+      });
+    }
   }
 };
