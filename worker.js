@@ -1,15 +1,3 @@
-/* =========================================================
-   CLOUDFLARE WORKER — FULL UPDATED SCRIPT
-   Features included:
-   - KV spy ingest (daily, <=1000 writes)
-   - Scoring with FF-only / KV-only / Both
-   - Top 3 recommendation
-   - Hit decay (anti-dogpile)
-   - Cooldown awareness
-   - Hospital timer awareness
-   - Faction vs faction balancing
-========================================================= */
-
 export default {
   async fetch(request, env) {
     const headers = {
@@ -18,116 +6,77 @@ export default {
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "*"
     };
+
     if (request.method === "OPTIONS") return new Response(null, { headers });
 
-    const url = new URL(request.url);
-
     try {
+      const url = new URL(request.url);
+      const FF_KEY = "rwLgZTyqgWDxhoCx";
 
-      /* ---------- SPY CHECK ---------- */
       if (url.searchParams.has("check")) {
+        // fetch from KV
         const spy = await env.ROTATOR.get(`spy_${url.searchParams.get("check")}`, { type: "json" });
         return new Response(JSON.stringify(spy || { error: "NOT_FOUND" }), { headers });
       }
 
-      /* ---------- DAILY INGEST ---------- */
-      if (request.method === "POST" && url.pathname === "/ingest") {
+      if (request.method === "POST") {
         const body = await request.json();
-        const now = Date.now();
 
-        await Promise.all(
-          body.spies.map(s =>
-            env.ROTATOR.put(
-              `spy_${s.player_id}`,
-              JSON.stringify({
-                name: s.name,
-                total: s.total,
-                strength: s.strength,
-                defense: s.defense,
-                speed: s.speed,
-                dexterity: s.dexterity
-              }),
-              { metadata: { lastUpdated: now } }
-            )
-          )
-        );
-
-        return new Response(JSON.stringify({ success: true, count: body.spies.length }), { headers });
-      }
-
-      /* ---------- MATCH + SCORE ---------- */
-      if (request.method === "POST" && url.pathname === "/match") {
-        const body = await request.json();
-        const { attacker, targets, faction_context } = body;
-
-        const now = Date.now();
-        const scored = [];
-
-        for (const t of targets) {
-          const spy = await env.ROTATOR.get(`spy_${t.player_id}`, { type: "json" });
-
-          let score = 0;
-          let components = {};
-
-          /* --- KV SPY --- */
-          if (spy?.total && attacker.total) {
-            const ratio = attacker.total / spy.total;
-            components.spy_ratio = ratio;
-            score += ratio * 60;
-          }
-
-          /* --- FF DATA --- */
-          if (t.ff?.ff && t.ff?.respect) {
-            const ffScore = 1 / t.ff.ff;
-            const respectWeight = Math.log10(t.ff.respect + 1);
-            components.ff = ffScore;
-            score += (ffScore * 30) + (respectWeight * 10);
-          }
-
-          /* --- HIT DECAY (DOGPILE PREVENTION) --- */
-          if (t.last_hit) {
-            const minutesAgo = (now - t.last_hit) / 60000;
-            if (minutesAgo < 30) score *= 0.4;
-            else if (minutesAgo < 60) score *= 0.7;
-          }
-
-          /* --- COOLDOWN AWARENESS --- */
-          if (t.cooldown_active === true) score *= 0.25;
-
-          /* --- HOSPITAL TIMER --- */
-          if (t.hospital_until && t.hospital_until > now) continue;
-
-          /* --- FACTION BALANCING --- */
-          if (faction_context) {
-            const load = faction_context.current_hits[t.player_id] || 0;
-            score *= 1 / (1 + load);
-          }
-
-          if (score <= 0) continue;
-
-          scored.push({
-            player_id: t.player_id,
-            name: t.name,
-            score: Number(score.toFixed(3)),
-            components,
-            spy: spy || null,
-            ff: t.ff || null
-          });
+        // If spies data sent -> push to KV
+        if (body.spies && Array.isArray(body.spies)) {
+          const now = Date.now();
+          await Promise.all(body.spies.map(s => 
+            env.ROTATOR.put(`spy_${s.player_id}`, JSON.stringify(s), { metadata: { lastUpdated: now } })
+          ));
+          return new Response(JSON.stringify({ success: true, count: body.spies.length }), { headers });
         }
 
-        scored.sort((a, b) => b.score - a.score);
+        // If attacker + targets sent -> calculate recommendations
+        if (body.attacker && body.targets) {
+          const attacker = body.attacker;
+          const faction_context = body.faction_context || {};
+          const scoredTargets = [];
 
-        return new Response(JSON.stringify({
-          best_target: scored[0] || null,
-          top_3_targets: scored.slice(0, 3),
-          ranked_targets: scored.slice(0, 25)
-        }), { headers });
+          for (let t of body.targets) {
+            // Try KV first
+            let kvData = await env.ROTATOR.get(`spy_${t.player_id}`, { type: "json" });
+
+            // If KV empty -> fallback to FF Scouter
+            if (!kvData) {
+              try {
+                const ffRes = await fetch(`https://ffscouter.com/api/v1/get-stats?key=${FF_KEY}&targets=${t.player_id}&user_id=${t.user_id||0}`);
+                const ffJson = await ffRes.json();
+                if (ffJson && ffJson[0]) {
+                  kvData = {
+                    name: ffJson[0].name || "Unknown",
+                    total: ffJson[0].bs_estimate_human || 0,
+                    strength: 0,
+                    defense: 0,
+                    speed: 0,
+                    dexterity: 0,
+                    ff: ffJson[0].fair_fight,
+                    respect: ffJson[0].respect || 0
+                  };
+                }
+              } catch(e) { kvData = { total:0, ff:0, respect:0, name:"Unknown" }; }
+            }
+
+            // Simple scoring: KV total if available, otherwise FF estimate * FF factor + respect
+            const score = (kvData.total || 0) + ((kvData.ff||0) * 10) + (kvData.respect||0);
+            scoredTargets.push({ player_id: t.player_id, name: kvData.name, score, ff: kvData.ff, respect: kvData.respect });
+          }
+
+          // Sort descending
+          scoredTargets.sort((a,b)=>b.score-a.score);
+
+          return new Response(JSON.stringify({ top_3_targets: scoredTargets.slice(0,3) }), { headers });
+        }
       }
 
-    } catch (e) {
+    } catch(e) {
       return new Response(JSON.stringify({ error: e.message }), { headers });
     }
 
-    return new Response(JSON.stringify({ status: "ROTATOR_ONLINE" }), { headers });
+    return new Response(JSON.stringify({ status: "BRIDGE_ONLINE" }), { headers });
   }
 };

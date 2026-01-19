@@ -1,91 +1,82 @@
-// index.js - The Unified Intelligence Worker
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
+    const headers = {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "*"
+    };
 
-    // --- PART A: DASHBOARD & WEBHOOK LOGIC ---
-    if (url.searchParams.has('id')) {
-      const targetId = url.searchParams.get('id');
-      const data = await this.getTornData(targetId, env);
+    if (request.method === "OPTIONS") return new Response(null, { headers });
 
-      // If 'notify=true' is in the URL, push a report to your old webhook
-      if (url.searchParams.get('notify') === 'true') {
-        await this.sendToWebhook(data, env.OLD_WEBHOOK_URL);
+    try {
+      const url = new URL(request.url);
+      const FF_KEY = "rwLgZTyqgWDxhoCx";
+
+      if (url.searchParams.has("check")) {
+        // fetch from KV
+        const spy = await env.ROTATOR.get(`spy_${url.searchParams.get("check")}`, { type: "json" });
+        return new Response(JSON.stringify(spy || { error: "NOT_FOUND" }), { headers });
       }
 
-      return new Response(JSON.stringify(data), { 
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } 
-      });
-    }
+      if (request.method === "POST") {
+        const body = await request.json();
 
-    // --- PART B: DISCORD SLASH COMMANDS ---
-    // Discord sends a "POST" to your Worker URL for every interaction
-    if (request.method === 'POST') {
-      const interaction = await request.json();
+        // If spies data sent -> push to KV
+        if (body.spies && Array.isArray(body.spies)) {
+          const now = Date.now();
+          await Promise.all(body.spies.map(s => 
+            env.ROTATOR.put(`spy_${s.player_id}`, JSON.stringify(s), { metadata: { lastUpdated: now } })
+          ));
+          return new Response(JSON.stringify({ success: true, count: body.spies.length }), { headers });
+        }
 
-      // 1. Respond to Discord's Security "Ping"
-      if (interaction.type === 1) {
-        return new Response(JSON.stringify({ type: 1 }), { headers: { "Content-Type": "application/json" } });
-      }
+        // If attacker + targets sent -> calculate recommendations
+        if (body.attacker && body.targets) {
+          const attacker = body.attacker;
+          const faction_context = body.faction_context || {};
+          const scoredTargets = [];
 
-      // 2. Handle /spy [ID]
-      if (interaction.type === 2 && interaction.data.name === 'spy') {
-        const targetId = interaction.data.options[0].value;
-        const data = await this.getTornData(targetId, env);
+          for (let t of body.targets) {
+            // Try KV first
+            let kvData = await env.ROTATOR.get(`spy_${t.player_id}`, { type: "json" });
 
-        return new Response(JSON.stringify({
-          type: 4, // "ChannelMessageWithSource"
-          data: {
-            embeds: [this.createEmbed(data)]
+            // If KV empty -> fallback to FF Scouter
+            if (!kvData) {
+              try {
+                const ffRes = await fetch(`https://ffscouter.com/api/v1/get-stats?key=${FF_KEY}&targets=${t.player_id}&user_id=${t.user_id||0}`);
+                const ffJson = await ffRes.json();
+                if (ffJson && ffJson[0]) {
+                  kvData = {
+                    name: ffJson[0].name || "Unknown",
+                    total: ffJson[0].bs_estimate_human || 0,
+                    strength: 0,
+                    defense: 0,
+                    speed: 0,
+                    dexterity: 0,
+                    ff: ffJson[0].fair_fight,
+                    respect: ffJson[0].respect || 0
+                  };
+                }
+              } catch(e) { kvData = { total:0, ff:0, respect:0, name:"Unknown" }; }
+            }
+
+            // Simple scoring: KV total if available, otherwise FF estimate * FF factor + respect
+            const score = (kvData.total || 0) + ((kvData.ff||0) * 10) + (kvData.respect||0);
+            scoredTargets.push({ player_id: t.player_id, name: kvData.name, score, ff: kvData.ff, respect: kvData.respect });
           }
-        }), { headers: { "Content-Type": "application/json" } });
+
+          // Sort descending
+          scoredTargets.sort((a,b)=>b.score-a.score);
+
+          return new Response(JSON.stringify({ top_3_targets: scoredTargets.slice(0,3) }), { headers });
+        }
       }
+
+    } catch(e) {
+      return new Response(JSON.stringify({ error: e.message }), { headers });
     }
 
-    return new Response("Intelligence System Online", { status: 200 });
-  },
-
-  async getTornData(id, env) {
-    // Merged logic from your BOW OC and Torn Stats endpoints
-    const tsRes = await fetch(`https://www.tornstats.com/api/v2/${env.TS_KEY}/spy/user/${id}`).then(r => r.json());
-    const tornRes = await fetch(`https://api.torn.com/user/${id}?selections=profile&key=${env.API_KEY}`).then(r => r.json());
-    
-    const stats = tsRes.spy || { total: 0 };
-    return {
-      id: id,
-      name: tornRes.name,
-      level: tornRes.level,
-      status: tornRes.status.description,
-      state: tornRes.status.state,
-      total: stats.total,
-      advice: this.getAdvice(stats)
-    };
-  },
-
-  getAdvice(s) {
-    if (s.total === 0) return "No Spy Found. Proceed with caution.";
-    if (s.dexterity > s.total * 0.3) return "DEX TANK: Use Tear Gas.";
-    return "Target confirmed. Standard combat boosters.";
-  },
-
-  createEmbed(data) {
-    return {
-      title: `Spy Report: ${data.name} [${data.id}]`,
-      color: data.state === 'Okay' ? 0x00ff00 : 0x3a86ff, // Green if OK, Blue if Traveling
-      fields: [
-        { name: "Stats", value: data.total > 0 ? (data.total / 1000000).toFixed(1) + "M" : "HIDDEN", inline: true },
-        { name: "Level", value: data.level.toString(), inline: true },
-        { name: "Status", value: data.status }
-      ],
-      footer: { text: "Tactical Advice: " + data.advice }
-    };
-  },
-
-  async sendToWebhook(data, url) {
-    await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ embeds: [this.createEmbed(data)] })
-    });
+    return new Response(JSON.stringify({ status: "BRIDGE_ONLINE" }), { headers });
   }
 };
