@@ -1,7 +1,24 @@
 export default {
   async fetch(request, env) {
+    // Allow preflight CORS requests
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type"
+        }
+      });
+    }
+
     if (request.method !== "POST") {
-      return new Response(JSON.stringify({ error: "POST only" }), { status: 405 });
+      return new Response(JSON.stringify({ error: "POST only" }), {
+        status: 405,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*"
+        }
+      });
     }
 
     let written = 0;
@@ -45,18 +62,21 @@ export default {
     } catch (e) {
       return new Response(JSON.stringify({ error: "Invalid JSON" }), {
         status: 400,
-        headers: { "Content-Type": "application/json" }
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*"
+        }
       });
     }
 
     return new Response(
-      JSON.stringify({
-        status: "ok",
-        written,
-        failed,
-        progress
-      }),
-      { headers: { "Content-Type": "application/json" } }
+      JSON.stringify({ status: "ok", written, failed, progress }),
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*"
+        }
+      }
     );
   }
 };
