@@ -1,56 +1,62 @@
-const FF_SCOUTER_KEY = "rwLgZTyqgWDxhoCx";
-
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
-    const checkId = url.searchParams.get("check");
-
-    if (!checkId) {
-      return new Response(JSON.stringify({ error: "Missing check parameter" }), {
-        headers: { "Content-Type": "application/json" },
-        status: 400
-      });
+    if (request.method !== "POST") {
+      return new Response(JSON.stringify({ error: "POST only" }), { status: 405 });
     }
+
+    let written = 0;
+    let failed = 0;
+    let progress = [];
 
     try {
-      const ffRes = await fetch(
-        "https://ffscouter.com/api/v1/get-stats?key=" +
-          FF_SCOUTER_KEY +
-          "&targets=" +
-          checkId +
-          "&user_id=0"
-      );
+      const body = await request.json();
+      const spies = body.spies || [];
 
-      const ffData = await ffRes.json();
+      for (let i = 0; i < spies.length; i++) {
+        const s = spies[i];
 
-      if (!ffData || !ffData[0]) {
-        return new Response(JSON.stringify({}), {
-          headers: { "Content-Type": "application/json" }
-        });
-      }
-
-      const ff = ffData[0];
-
-      return new Response(
-        JSON.stringify({
-          fair_fight: ff.fair_fight || 0,
-          respect: ff.respect || 0,
-          estimate: ff.estimate || "?",
-          total: Math.round((ff.fair_fight || 1) * 1000),
-          strength: 0,
-          defense: 0,
-          speed: 0,
-          dexterity: 0
-        }),
-        {
-          headers: { "Content-Type": "application/json" }
+        if (!s.player_id) {
+          failed++;
+          continue;
         }
-      );
+
+        try {
+          await env.ROTATOR.put(
+            "spy_" + s.player_id,
+            JSON.stringify({
+              name: s.name || "",
+              strength: s.strength || 0,
+              defense: s.defense || 0,
+              speed: s.speed || 0,
+              dexterity: s.dexterity || 0,
+              total: s.total || 0,
+              updated: Date.now()
+            })
+          );
+          written++;
+
+          if (written % 50 === 0) {
+            progress.push({ written });
+          }
+        } catch {
+          failed++;
+        }
+      }
     } catch (e) {
-      return new Response(JSON.stringify({ error: "Fetch failed" }), {
-        headers: { "Content-Type": "application/json" },
-        status: 500
+      return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
       });
     }
+
+    return new Response(
+      JSON.stringify({
+        status: "ok",
+        written,
+        failed,
+        progress
+      }),
+      { headers: { "Content-Type": "application/json" } }
+    );
   }
 };
