@@ -22,7 +22,7 @@ export default {
           const kv = await env.ROTATOR.get(`spy_${t.player_id}`, { type: "json" }) || {};
           
           // FF Scouter fallback
-          const ffStats = await fetch(`https://ffscouter.com/api/v1/get-stats?key=${env.FF_KEY}&targets=${t.player_id}&user_id=${uid}`)
+          const ffStats = await fetch(`https://ffscouter.com/api/v1/get-stats?key=${rwLgZTyqgWDxhoCx}&targets=${t.player_id}&user_id=${uid}`)
                             .then(r=>r.json())
                             .catch(()=>[]);
 
