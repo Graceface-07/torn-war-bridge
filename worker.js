@@ -14,23 +14,36 @@ export default {
         const body = await request.json();
         const attacker = body.attacker || { total: 0 };
         const targets = body.targets || [];
+        const uid = body.attacker?.user_id || "0";
 
-        // For each target, try KV first, fallback to FF Scouter stats
+        // Score each target using KV + FF Scouter
         const scoredTargets = await Promise.all(targets.map(async t => {
-          // Try KV
+          // KV database first
           const kv = await env.ROTATOR.get(`spy_${t.player_id}`, { type: "json" }) || {};
-          const ff = t.ff || kv.ff || 0;
+          
+          // FF Scouter fallback
+          const ffStats = await fetch(`https://ffscouter.com/api/v1/get-stats?key=${env.FF_KEY}&targets=${t.player_id}&user_id=${uid}`)
+                            .then(r=>r.json())
+                            .catch(()=>[]);
+
+          const ff = (ffStats[0]?.fair_fight) || kv.ff || 0;
           const totalStats = kv.total || t.total || 0;
-          const score = totalStats + ff * 100; // simple scoring formula
+          const respect = (ffStats[0]?.respect) || 0;
+
+          // Scoring formula: combination of stats, FF multiplier, respect
+          const score = totalStats + ff*100 + respect;
+
           return {
             player_id: t.player_id,
             name: t.name || kv.name || "Unknown",
             score,
-            total: totalStats
+            total: totalStats,
+            ff,
+            respect
           };
         }));
 
-        // Sort by score descending, pick top 3
+        // Sort descending and pick top 3
         const top_3_targets = scoredTargets.sort((a,b)=>b.score - a.score).slice(0,3);
 
         return new Response(JSON.stringify({ top_3_targets }), { headers });
