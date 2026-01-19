@@ -16,7 +16,15 @@ export default {
         const spy = await env.ROTATOR.get(`spy_${url.searchParams.get("check")}`, { type: "json" });
         return new Response(JSON.stringify(spy || { error: "NOT_FOUND" }), { headers });
       }
-
+      if (request.method === "GET") {
+        const url = new URL(request.url);
+        const key = url.pathname.slice(1); // Gets "spy_12345" from "/spy_12345"
+  
+  if (key.startsWith("spy_")) {
+    const data = await env.ROTATOR.get(key, { type: "json" });
+    return new Response(JSON.stringify(data || {}), { headers });
+  }
+}
       // Score targets
       if (request.method === "POST") {
         const body = await request.json();
@@ -29,6 +37,17 @@ export default {
           let spy = await env.ROTATOR.get(`spy_${t.player_id}`, { type: "json" });
 
           // Fallback to FF Scouter
+          let spy = await env.ROTATOR.get(`spy_${t.player_id}`, { type: "json" });
+if (!spy) {
+  // Dummy stats if nothing found
+  spy = {
+    total: Math.floor(Math.random()*1000 + 500),
+    strength: 250,
+    defense: 250,
+    speed: 250,
+    dexterity: 250
+  };
+}
           if (!spy) {
             const ffRes = await fetch(`https://ffscouter.com/api/v1/get-stats?key=${env.FF_SCOUTER_KEY}&targets=${t.player_id}&user_id=${body.attacker_id||0}`);
             const ffData = await ffRes.json();

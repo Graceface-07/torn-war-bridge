@@ -16,7 +16,15 @@ export default {
         const spy = await env.ROTATOR.get(`spy_${url.searchParams.get("check")}`, { type: "json" });
         return new Response(JSON.stringify(spy || { error: "NOT_FOUND" }), { headers });
       }
-
+if (request.method === "GET") {
+  const url = new URL(request.url);
+  const key = url.pathname.slice(1); // Gets "spy_12345" from "/spy_12345"
+  
+  if (key.startsWith("spy_")) {
+    const data = await env.ROTATOR.get(key, { type: "json" });
+    return new Response(JSON.stringify(data || {}), { headers });
+  }
+}
       // Score targets
       if (request.method === "POST") {
         const body = await request.json();
