@@ -8,7 +8,7 @@ export default {
       const key = "spy_" + id;
 
       try {
-        const raw = await env.ROTATER.get(key);
+        const raw = await env.ROTATOR.get(key);
 
         if (!raw) {
           return new Response(JSON.stringify({
