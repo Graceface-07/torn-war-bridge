@@ -1,73 +1,135 @@
-// worker.js - V9.9.5
-   var worker_default = {
+export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const path = url.pathname;
+    const API_KEY = env.TORN_KEY; // optional, only needed for fallback
 
-    // Standard CORS Headers for all responses
-    const headers = {
+    // CORS
+    const corsHeaders = {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type"
+      "Access-Control-Allow-Origin": "*"
     };
 
-    // Handle Pre-flight Options request
-    if (request.method === "OPTIONS") {
-      return new Response(null, { headers });
+    // Helper: Torn API fetch
+    async function torn(endpoint) {
+      const res = await fetch(`https://api.torn.com/${endpoint}&key=${API_KEY}`);
+      return res.json();
     }
 
-    if (!env.ROTATOR) {
-      return new Response(JSON.stringify({ ok: false, error: "KV Binding 'ROTATOR' missing." }), { status: 500, headers });
+    // -------------------------------
+    // GET /check?uid=123
+    // -------------------------------
+    if (url.pathname === "/check") {
+      const uid = url.searchParams.get("uid");
+      if (!uid) return new Response("{}", { headers: corsHeaders });
+
+      const kv = await env.ROTATOR.get(`spy_${uid}`);
+      return new Response(kv || "{}", { headers: corsHeaders });
     }
 
-    // --- GET HANDLERS ---
-    if (request.method === "GET") {
-      // Logic for ?check=ID
-      if (request.method === "GET" && url.searchParams.has("check")) {
-  const targetId = url.searchParams.get("check");
-  const data = await env.ROTATOR.get(`spy_${targetId}`);
-  return new Response(data || "{}", { headers });
-}
-      // Logic for /stats?uid=ID
-      if (path === "/stats") {
-        const uid = url.searchParams.get("uid");
-        if (!uid) return new Response("Missing uid", { status: 400, headers });
-        const data = await env.ROTATOR.get(`spy_${uid}`);
-        return new Response(data || "{}", { headers });
-      }
+    // -------------------------------
+    // GET /stats?uid=123
+    // -------------------------------
+    if (url.pathname === "/stats") {
+      const uid = url.searchParams.get("uid");
+      if (!uid) return new Response("{}", { headers: corsHeaders });
 
-      // Logic for /faction?id=ID
-      if (path === "/faction") {
-        const fid = url.searchParams.get("id");
-        if (!fid) return new Response("Missing faction id", { status: 400, headers });
-        const data = await env.ROTATOR.get(`faction_${fid}`);
-        return new Response(data || "{}", { headers });
-      }
+      // Try KV first
+      const kv = await env.ROTATOR.get(`spy_${uid}`);
+      if (kv) return new Response(kv, { headers: corsHeaders });
+
+      // Fallback: Torn API
+      const data = await torn(`user/${uid}?selections=basic`);
+      return new Response(JSON.stringify(data), { headers: corsHeaders });
     }
 
-    // --- POST HANDLER (pushdaily) ---
-    // Accepts POST to root "/" or "/push"
-    if (request.method === "POST") {
-      try {
-        const body = await request.json();
-        if (!body.spies || !Array.isArray(body.spies)) {
-          throw new Error("Malformed data: 'spies' array required.");
-        }
-        for (const spy of body.spies) {
-          if (spy.player_id) {
-            await env.ROTATOR.put(`spy_${spy.player_id}`, JSON.stringify(spy));
+    // -------------------------------
+    // GET /faction?id=420
+    // -------------------------------
+    if (url.pathname === "/faction") {
+      const fid = url.searchParams.get("id");
+      if (!fid) return new Response("{}", { headers: corsHeaders });
+
+      // Try KV first
+      const kv = await env.ROTATOR.get(`faction_${fid}`);
+      if (kv) return new Response(kv, { headers: corsHeaders });
+
+      // Fallback: Torn API
+      const data = await torn(`faction/${fid}?selections=basic`);
+      return new Response(JSON.stringify(data), { headers: corsHeaders });
+    }
+
+    // -----------------------------------------------------
+    // GET /faction-search?query=xxx
+    // -----------------------------------------------------
+    if (url.pathname === "/faction-search") {
+      const query = url.searchParams.get("query")?.toLowerCase() || "";
+
+      // 1. Try KV first
+      let cursor = null;
+      const results = [];
+
+      do {
+        const list = await env.ROTATOR.list({ prefix: "faction_", cursor });
+        cursor = list.cursor;
+
+        for (const key of list.keys) {
+          const raw = await env.ROTATOR.get(key.name);
+          if (!raw) continue;
+
+          const obj = JSON.parse(raw);
+          const name = obj.name?.toLowerCase() || "";
+          const tag = obj.tag?.toLowerCase() || "";
+          const id = String(obj.id);
+
+          if (
+            name.includes(query) ||
+            tag.includes(query) ||
+            id.startsWith(query)
+          ) {
+            results.push({ id: obj.id, name: obj.name, tag: obj.tag });
           }
         }
-        return new Response(JSON.stringify({ ok: true, count: body.spies.length }), { status: 200, headers });
-      } catch (e) {
-        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers });
+      } while (cursor);
+
+      if (results.length > 0) {
+        return new Response(JSON.stringify(results), { headers: corsHeaders });
       }
+
+      // 2. Fallback: Torn API (search by name)
+      const tornData = await torn(`faction/?selections=basic`);
+      const tornResults = Object.values(tornData.factions || {}).filter(f => {
+        const name = f.name?.toLowerCase() || "";
+        const tag = f.tag?.toLowerCase() || "";
+        const id = String(f.ID);
+        return (
+          name.includes(query) ||
+          tag.includes(query) ||
+          id.startsWith(query)
+        );
+      });
+
+      return new Response(JSON.stringify(tornResults), { headers: corsHeaders });
     }
 
-    // --- FALLBACK ---
-    return new Response(JSON.stringify({ error: "Method Not Allowed or Invalid Path", path: path }), { status: 405, headers });
+    // -------------------------------
+    // POST (DISABLED — NO KV WRITES TODAY)
+    // -------------------------------
+    if (request.method === "POST") {
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "KV write quota reached — write operations disabled today."
+        }),
+        { status: 429, headers: corsHeaders }
+      );
+    }
+
+    // -------------------------------
+    // FALLBACK
+    // -------------------------------
+    return new Response("Method Not Allowed", {
+      status: 405,
+      headers: corsHeaders
+    });
   }
 };
-
-export { worker_default as default };
