@@ -51,7 +51,7 @@ export default {
         const ops = [];
         for (const id in spies) {
           const key = "spy_" + id;
-          ops.push(env.ROTATER.put(key, JSON.stringify(spies[id])));
+          ops.push(env.ROTATOR.put(key, JSON.stringify(spies[id])));
         }
 
         await Promise.all(ops);
