@@ -1,181 +1,73 @@
-export default {
+// worker.js - V9.9.5
+var worker_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const path = url.pathname;
 
-    // Ensure KV binding exists
+    // Standard CORS Headers for all responses
+    const headers = {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type"
+    };
+
+    // Handle Pre-flight Options request
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers });
+    }
+
     if (!env.ROTATOR) {
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          error: "KV Binding 'ROTATOR' missing. Check Settings > Variables."
-        }),
-        {
-          status: 500,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*"
-          }
-        }
-      );
+      return new Response(JSON.stringify({ ok: false, error: "KV Binding 'ROTATOR' missing." }), { status: 500, headers });
     }
 
-    // -------------------------------
-    // GET /check?uid=123  (existing)
-    // -------------------------------
-    if (request.method === "GET" && url.searchParams.has("check")) {
-      const targetId = url.searchParams.get("check");
-      const data = await env.ROTATOR.get(`spy_${targetId}`);
-      return new Response(data || "{}", {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        }
-      });
-    }
-
-    // -------------------------------
-    // GET /stats?uid=123  (new)
-    // -------------------------------
-    if (request.method === "GET" && url.pathname === "/stats") {
-      const uid = url.searchParams.get("uid");
-      if (!uid) {
-        return new Response("Missing uid", { status: 400 });
+    // --- GET HANDLERS ---
+    if (request.method === "GET") {
+      // Logic for ?check=ID
+      if (url.searchParams.has("check")) {
+        const data = await env.ROTATOR.get(`spy_${url.searchParams.get("check")}`);
+        return new Response(data || "{}", { headers });
+      }
+      
+      // Logic for /stats?uid=ID
+      if (path === "/stats") {
+        const uid = url.searchParams.get("uid");
+        if (!uid) return new Response("Missing uid", { status: 400, headers });
+        const data = await env.ROTATOR.get(`spy_${uid}`);
+        return new Response(data || "{}", { headers });
       }
 
-      const data = await env.ROTATOR.get(`spy_${uid}`);
-      return new Response(data || "{}", {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        }
-      });
-    }
-
-    // -------------------------------
-    // GET /faction?id=123  (new)
-    // -------------------------------
-    if (request.method === "GET" && url.pathname === "/faction") {
-      const fid = url.searchParams.get("id");
-      if (!fid) {
-        return new Response("Missing faction id", { status: 400 });
+      // Logic for /faction?id=ID
+      if (path === "/faction") {
+        const fid = url.searchParams.get("id");
+        if (!fid) return new Response("Missing faction id", { status: 400, headers });
+        const data = await env.ROTATOR.get(`faction_${fid}`);
+        return new Response(data || "{}", { headers });
       }
-
-      const data = await env.ROTATOR.get(`faction_${fid}`);
-      return new Response(data || "{}", {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        }
-      });
     }
 
-    // -----------------------------------------------------
-    // GET /faction-search?query=xxx  (autocomplete)
-    // -----------------------------------------------------
-    if (request.method === "GET" && url.pathname === "/faction-search") {
-      const query = url.searchParams.get("query")?.toLowerCase() || "";
-      if (!query) {
-        return new Response("[]", {
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*"
-          }
-        });
-      }
-
-      let cursor = null;
-      const results = [];
-
-      do {
-        const list = await env.ROTATOR.list({
-          prefix: "faction_",
-          cursor
-        });
-
-        cursor = list.cursor;
-
-        for (const key of list.keys) {
-          const raw = await env.ROTATOR.get(key.name);
-          if (!raw) continue;
-
-          const obj = JSON.parse(raw);
-
-          const name = obj.name?.toLowerCase() || "";
-          const tag = obj.tag?.toLowerCase() || "";
-          const id = String(obj.id);
-
-          if (
-            name.includes(query) ||
-            tag.includes(query) ||
-            id.startsWith(query)
-          ) {
-            results.push({
-              id: obj.id,
-              name: obj.name,
-              tag: obj.tag
-            });
-          }
-        }
-      } while (cursor);
-
-      return new Response(JSON.stringify(results), {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        }
-      });
-    }
-
-    // -------------------------------
-    // POST (batch spy upload)
-    // -------------------------------
+    // --- POST HANDLER (pushdaily) ---
+    // Accepts POST to root "/" or "/push"
     if (request.method === "POST") {
       try {
         const body = await request.json();
-
         if (!body.spies || !Array.isArray(body.spies)) {
           throw new Error("Malformed data: 'spies' array required.");
         }
-
         for (const spy of body.spies) {
           if (spy.player_id) {
-            await env.ROTATOR.put(
-              `spy_${spy.player_id}`,
-              JSON.stringify(spy)
-            );
+            await env.ROTATOR.put(`spy_${spy.player_id}`, JSON.stringify(spy));
           }
         }
-
-        return new Response(
-          JSON.stringify({ ok: true, count: body.spies.length }),
-          {
-            status: 200,
-            headers: {
-              "Content-Type": "application/json",
-              "Access-Control-Allow-Origin": "*"
-            }
-          }
-        );
+        return new Response(JSON.stringify({ ok: true, count: body.spies.length }), { status: 200, headers });
       } catch (e) {
-        return new Response(
-          JSON.stringify({ ok: false, error: e.message }),
-          {
-            status: 500,
-            headers: {
-              "Content-Type": "application/json",
-              "Access-Control-Allow-Origin": "*"
-            }
-          }
-        );
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers });
       }
     }
 
-    // -------------------------------
-    // FALLBACK
-    // -------------------------------
-    return new Response("Method Not Allowed", {
-      status: 405,
-      headers: { "Access-Control-Allow-Origin": "*" }
-    });
+    // --- FALLBACK ---
+    return new Response(JSON.stringify({ error: "Method Not Allowed or Invalid Path", path: path }), { status: 405, headers });
   }
 };
+
+export { worker_default as default };
