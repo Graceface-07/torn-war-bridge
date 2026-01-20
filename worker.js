@@ -1,5 +1,5 @@
 // worker.js - V9.9.5
-var worker_default = {
+   var worker_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -24,11 +24,11 @@ var worker_default = {
     // --- GET HANDLERS ---
     if (request.method === "GET") {
       // Logic for ?check=ID
-      if (url.searchParams.has("check")) {
-        const data = await env.ROTATOR.get(`spy_${url.searchParams.get("check")}`);
-        return new Response(data || "{}", { headers });
-      }
-      
+      if (request.method === "GET" && url.searchParams.has("check")) {
+  const targetId = url.searchParams.get("check");
+  const data = await env.ROTATOR.get(`spy_${targetId}`);
+  return new Response(data || "{}", { headers });
+}
       // Logic for /stats?uid=ID
       if (path === "/stats") {
         const uid = url.searchParams.get("uid");
