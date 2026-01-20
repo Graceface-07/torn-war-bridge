@@ -1,73 +1,65 @@
 export default {
   async fetch(request, env) {
-    // Only allow POST
-    if (request.method !== "POST") {
-      return new Response(JSON.stringify({ error: "POST only" }), {
-        status: 405,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
+    const url = new URL(request.url);
+
+    // --- GET: ?check=ID ---
+    if (url.pathname === "/" && url.searchParams.has("check")) {
+      const id = url.searchParams.get("check");
+
+      try {
+        const raw = await env.ROTATER.get(id);
+        if (!raw) {
+          return new Response(JSON.stringify({
+            strength: 0,
+            defense: 0,
+            speed: 0,
+            dexterity: 0,
+            total: 0
+          }), { status: 200, headers: { "Content-Type": "application/json" } });
         }
-      });
+
+        return new Response(raw, {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        });
+
+      } catch (err) {
+        return new Response(JSON.stringify({
+          strength: 0,
+          defense: 0,
+          speed: 0,
+          dexterity: 0,
+          total: 0
+        }), { status: 200, headers: { "Content-Type": "application/json" } });
+      }
     }
 
-    let written = 0;
-    let failed = 0;
-    let progress = [];
+    // --- POST: bulk spy upload ---
+    if (request.method === "POST") {
+      try {
+        const body = await request.json();
+        const spies = body.spies || {};
 
-    try {
-      const body = await request.json();
-      const spies = body.spies || [];
-
-      for (let i = 0; i < spies.length; i++) {
-        const s = spies[i];
-
-        if (!s.player_id) {
-          failed++;
-          continue;
+        const ops = [];
+        for (const id in spies) {
+          ops.push(env.ROTATER.put(id, JSON.stringify(spies[id])));
         }
+        await Promise.all(ops);
 
-        try {
-          await env.ROTATOR.put(
-            "spy_" + s.player_id,
-            JSON.stringify({
-              name: s.name || "",
-              strength: s.strength || 0,
-              defense: s.defense || 0,
-              speed: s.speed || 0,
-              dexterity: s.dexterity || 0,
-              total: s.total || 0,
-              updated: Date.now()
-            })
-          );
+        return new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        });
 
-          written++;
-
-          if (written % 50 === 0) {
-            progress.push({ written });
-          }
-        } catch (err) {
-          failed++;
-        }
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: err.toString() }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" }
+        });
       }
-    } catch (e) {
-      return new Response(JSON.stringify({ error: "Invalid JSON" }), {
-        status: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        }
-      });
     }
 
-    return new Response(
-      JSON.stringify({ status: "ok", written, failed, progress }),
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        }
-      }
-    );
+    // fallback
+    return new Response("KV Worker Active (ROTATER)", { status: 200 });
   }
 };
