@@ -85,12 +85,26 @@ export default {
     // POST → Only used to write spies (optional)
     // -------------------------------
     if (request.method === "POST") {
-      return new Response(
-        JSON.stringify({ ok: false, error: "KV writes disabled today" }),
-        { status: 429, headers: corsHeaders }
-      );
+  try {
+    const body = await request.json();
+    const spies = body.spies || [];
+
+    // Loop through the spies sent from the Sheet and save to KV
+    for (const spy of spies) {
+      // Key: spy_12345 | Value: JSON string of stats
+      await env.ROTATOR.put(`spy_${spy.player_id}`, JSON.stringify(spy), {
+        expirationTtl: 86400 * 30 // Optional: Auto-expire after 30 days
+      });
     }
 
-    return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
+    return new Response(JSON.stringify({ ok: true, count: spies.length }), { 
+      headers: corsHeaders 
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ ok: false, error: e.message }), { 
+      status: 500, headers: corsHeaders 
+    });
+  }
+}
   }
 };
