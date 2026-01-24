@@ -1,110 +1,50 @@
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    const API_KEY = env.TORN_KEY; // Torn API key
-    const corsHeaders = {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*"
-    };
+function dailyPushToHUD() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("HUD_MASTER");
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 8).getValues();
+  let queue = [];
 
-    async function torn(endpoint) {
-      const res = await fetch(`https://api.torn.com/${endpoint}&key=${API_KEY}`);
-      return res.json();
-    }
+  // 1. PREPARE CLEAN BATCH
+  for (let i = 0; i < data.length; i++) {
+    const alreadyPushed = data[i][7] === true;
+    if (alreadyPushed) continue;
 
-    // -------------------------------
-    // GET /check?uid=123 → KV only
-    // -------------------------------
-    if (url.pathname === "/check") {
-      const uid = url.searchParams.get("uid");
-      if (!uid) return new Response("{}", { headers: corsHeaders });
-      const kv = await env.ROTATOR.get(`spy_${uid}`);
-      return new Response(kv || "{}", { headers: corsHeaders });
-    }
+    const cleanID = Math.floor(data[i][0]).toString().replace(/,/g, "");
+    queue.push({
+      player_id: cleanID,
+      name: data[i][1],
+      strength: parseFloat(data[i][2]) || 0,
+      defense: parseFloat(data[i][3]) || 0,
+      speed: parseFloat(data[i][4]) || 0,
+      dexterity: parseFloat(data[i][5]) || 0,
+      total: parseFloat(data[i][6]) || 0
+    });
 
-    // -------------------------------
-    // GET /stats?uid=123 → Always Torn
-    // -------------------------------
-    if (url.pathname === "/stats") {
-      const uid = url.searchParams.get("uid");
-      if (!uid) return new Response("{}", { headers: corsHeaders });
-      const data = await torn(`user/${uid}?selections=profile,battlestats,cooldowns`);
-      return new Response(JSON.stringify(data), { headers: corsHeaders });
-    }
+    if (queue.length >= 950) break; // Quota Protection (Stay under 1,000)
+  }
 
-    // -------------------------------
-    // GET /faction?id=123 → Always Torn
-    // -------------------------------
-    if (url.pathname === "/faction") {
-      const fid = url.searchParams.get("id");
-      if (!fid) return new Response("{}", { headers: corsHeaders });
-      const data = await torn(`faction/${fid}?selections=basic,members`);
-      return new Response(JSON.stringify(data), { headers: corsHeaders });
-    }
+  if (queue.length === 0) return Logger.log("Nothing to push.");
 
-    // -------------------------------
-    // GET /faction-search?query=xxx → KV + Torn fallback
-    // -------------------------------
-    if (url.pathname === "/faction-search") {
-      const query = url.searchParams.get("query")?.toLowerCase() || "";
-      let results = [];
-
-      // Try KV cache for factions
-      let cursor = null;
-      do {
-        const list = await env.ROTATOR.list({ prefix: "faction_", cursor });
-        cursor = list.cursor;
-        for (const key of list.keys) {
-          const raw = await env.ROTATOR.get(key.name);
-          if (!raw) continue;
-          const obj = JSON.parse(raw);
-          const name = obj.name?.toLowerCase() || "";
-          const tag = obj.tag?.toLowerCase() || "";
-          const id = String(obj.id);
-          if (name.includes(query) || tag.includes(query) || id.startsWith(query)) {
-            results.push({ id: obj.id, name: obj.name, tag: obj.tag });
-          }
-        }
-      } while (cursor);
-
-      // If no KV results, search Torn
-      if (results.length === 0) {
-        const tornData = await torn(`faction/?selections=basic`);
-        results = Object.values(tornData.factions || {}).filter(f => {
-          const name = f.name?.toLowerCase() || "";
-          const tag = f.tag?.toLowerCase() || "";
-          const id = String(f.ID || f.id);
-          return name.includes(query) || tag.includes(query) || id.startsWith(query);
-        }).map(f => ({ id: f.ID || f.id, name: f.name, tag: f.tag }));
-      }
-
-      return new Response(JSON.stringify(results), { headers: corsHeaders });
-    }
-
-    // -------------------------------
-    // POST → Only used to write spies (optional)
-    // -------------------------------
-    if (request.method === "POST") {
+  // 2. EXECUTE VERIFIED PUSH
   try {
-    const body = await request.json();
-    const spies = body.spies || [];
+    const res = UrlFetchApp.fetch(WORKER_URL, {
+      method: 'POST',
+      contentType: 'application/json',
+      payload: JSON.stringify({ spies: queue }),
+      muteHttpExceptions: true
+    });
 
-    // Loop through the spies sent from the Sheet and save to KV
-    for (const spy of spies) {
-      // Key: spy_12345 | Value: JSON string of stats
-      await env.ROTATOR.put(`spy_${spy.player_id}`, JSON.stringify(spy), {
-        expirationTtl: 86400 * 30 // Optional: Auto-expire after 30 days
+    if (res.getResponseCode() === 200) {
+      // 3. SUCCESS: Mark only the IDs we sent as TRUE
+      const finalFlags = data.map(row => {
+        const idStr = Math.floor(row[0]).toString();
+        const wasSent = queue.some(q => q.player_id === idStr);
+        return [row[7] === true || wasSent];
       });
+      sheet.getRange(2, 8, finalFlags.length, 1).setValues(finalFlags);
+      Logger.log(`Successfully populated ${queue.length} records.`);
     }
-
-    return new Response(JSON.stringify({ ok: true, count: spies.length }), { 
-      headers: corsHeaders 
-    });
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: e.message }), { 
-      status: 500, headers: corsHeaders 
-    });
+    Logger.log("Push failed: " + e.message);
   }
 }
-  }
-};
