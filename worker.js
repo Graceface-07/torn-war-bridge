@@ -1,50 +1,37 @@
-function dailyPushToHUD() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("HUD_MASTER");
-  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 8).getValues();
-  let queue = [];
+export default {
+  async fetch(request, env) {
+    const corsHeaders = {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    };
 
-  // 1. PREPARE CLEAN BATCH
-  for (let i = 0; i < data.length; i++) {
-    const alreadyPushed = data[i][7] === true;
-    if (alreadyPushed) continue;
-
-    const cleanID = Math.floor(data[i][0]).toString().replace(/,/g, "");
-    queue.push({
-      player_id: cleanID,
-      name: data[i][1],
-      strength: parseFloat(data[i][2]) || 0,
-      defense: parseFloat(data[i][3]) || 0,
-      speed: parseFloat(data[i][4]) || 0,
-      dexterity: parseFloat(data[i][5]) || 0,
-      total: parseFloat(data[i][6]) || 0
-    });
-
-    if (queue.length >= 950) break; // Quota Protection (Stay under 1,000)
-  }
-
-  if (queue.length === 0) return Logger.log("Nothing to push.");
-
-  // 2. EXECUTE VERIFIED PUSH
-  try {
-    const res = UrlFetchApp.fetch(WORKER_URL, {
-      method: 'POST',
-      contentType: 'application/json',
-      payload: JSON.stringify({ spies: queue }),
-      muteHttpExceptions: true
-    });
-
-    if (res.getResponseCode() === 200) {
-      // 3. SUCCESS: Mark only the IDs we sent as TRUE
-      const finalFlags = data.map(row => {
-        const idStr = Math.floor(row[0]).toString();
-        const wasSent = queue.some(q => q.player_id === idStr);
-        return [row[7] === true || wasSent];
-      });
-      sheet.getRange(2, 8, finalFlags.length, 1).setValues(finalFlags);
-      Logger.log(`Successfully populated ${queue.length} records.`);
+    // 1. DATABASE LOOKUP (GET)
+    if (request.method === "GET") {
+      const url = new URL(request.url);
+      const uid = url.searchParams.get("uid");
+      if (!uid) return new Response("{}", { headers: corsHeaders });
+      
+      const kv = await env.ROTATOR.get(`spy_${uid}`);
+      return new Response(kv || "{}", { headers: corsHeaders });
     }
-  } catch (e) {
-    Logger.log("Push failed: " + e.message);
+
+    // 2. DATABASE UPLOAD (POST)
+    if (request.method === "POST") {
+      try {
+        const body = await request.json();
+        const spies = body.spies || [];
+        
+        for (const spy of spies) {
+          // Store each spy using player_id as the key
+          await env.ROTATOR.put(`spy_${spy.player_id}`, JSON.stringify(spy));
+        }
+
+        return new Response(JSON.stringify({ ok: true, count: spies.length }), { headers: corsHeaders });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsHeaders });
+      }
+    }
+
+    return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
   }
-}
+};
