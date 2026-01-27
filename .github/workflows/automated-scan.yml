@@ -6,9 +6,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Create marker
         run: |
           echo "Automated scan started at $(date)" > scan-run.txt
+
+      - name: Run scan
+        run: |
+          # Insert your scan command here; make it append output to scan-run.txt
+          # Example placeholder (replace with real scan):
+          # ./run-scan.sh >> scan-run.txt 2>&1 || true
+          echo "(scan not configured)" >> scan-run.txt
+
+      - name: Append completion marker
+        run: |
+          echo "Automated scan finished at $(date)" >> scan-run.txt
+
       - name: Upload marker
         uses: actions/upload-artifact@v4
         with:
