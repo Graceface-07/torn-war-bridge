@@ -1,0 +1,51 @@
+name: War Machine - Auto Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      fid:
+        description: 'Faction ID (optional)'
+        required: false
+      uid:
+        description: 'Operator user id (optional)'
+        required: false
+  schedule:
+    - cron: '*/30 * * * *'  # every 30 minutes (adjust as needed)
+  push:
+    branches:
+      - main
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Use Node 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install (none required) but ensure file is present
+        run: ls -la
+
+      - name: Run debug_collect
+        env:
+          TORN_API_KEY: ${{ secrets.TORN_API_KEY }}
+          SC_KEY: ${{ secrets.SC_KEY }}
+          # Optional global defaults (set these in repo Secrets if you want)
+          FID: ${{ secrets.FID || github.event.inputs.fid || '' }}
+          UID: ${{ secrets.UID || github.event.inputs.uid || '' }}
+          LIMIT: '200'
+          BATCH: '50'
+          CONCURRENCY: '4'
+        run: |
+          echo "Starting war scan..."
+          node debug_collect.js --fid "${{ github.event.inputs.fid || env.FID }}" --uid "${{ github.event.inputs.uid || env.UID }}" --limit $LIMIT --batch $BATCH --concurrency $CONCURRENCY || echo "Script exit code: $?"
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: war-scan-results
+          path: war_scan_*.json
