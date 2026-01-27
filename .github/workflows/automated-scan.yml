@@ -1,0 +1,16 @@
+name: Automated scan
+on:
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create marker
+        run: |
+          echo "Automated scan started at $(date)" > scan-run.txt
+      - name: Upload marker
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-run
+          path: scan-run.txt
