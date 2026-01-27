@@ -22,6 +22,13 @@ jobs:
         run: |
           echo "Automated scan finished at $(date)" >> scan-run.txt
 
+      - name: Show file before upload (debug)
+        run: |
+          echo "--- scan-run.txt contents before upload ---"
+          cat scan-run.txt || true
+          echo "--- scan-run.txt stat ---"
+          ls -l scan-run.txt || true
+
       - name: Upload marker
         uses: actions/upload-artifact@v4
         with:
