@@ -3,38 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torn War Bridge - Tactical Dashboard</title>
+    <title>Torn War Bridge</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🎯 Torn War Bridge</h1>
-            <p>Automated Tactical Dashboard</p>
+            <h1>⚔️ Torn War Bridge</h1>
+            <p>Faction management and FF analysis</p>
         </header>
 
-        <main>
-            <section class="dashboard">
-                <div class="card faction-info">
-                    <h2>Faction Overview</h2>
-                    <div id="factionData">Loading faction data...</div>
-                </div>
+        <div class="control-panel">
+            <div class="input-group">
+                <label for="userIdInput">Your User ID:</label>
+                <input type="text" id="userIdInput" placeholder="Enter your User ID">
+            </div>
+            <div class="input-group">
+                <label for="factionIdInput">Faction ID:</label>
+                <input type="text" id="factionIdInput" placeholder="Enter Faction ID">
+            </div>
+            <button id="loadButton" class="btn-primary">Load Faction</button>
+        </div>
 
-                <div class="card member-stats">
-                    <h2>Member Statistics</h2>
-                    <div id="memberData">Loading member data...</div>
-                </div>
+        <div class="data-section">
+            <div id="playerData" class="card">
+                <p>Enter your details above</p>
+            </div>
+            <div id="factionData" class="card">
+                <p>Loading...</p>
+            </div>
+        </div>
 
-                <div class="card weapon-info">
-                    <h2>Weapon Arsenal</h2>
-                    <div id="weaponData">Loading weapon data...</div>
-                </div>
-            </section>
-        </main>
-
-        <footer>
-            <p>Torn War Bridge v1.0 | Real-time tactical intelligence</p>
-        </footer>
+        <div class="data-section">
+            <div id="membersData" class="card">
+                <p>Waiting for input...</p>
+            </div>
+        </div>
     </div>
 
     <script src="dashboard.js"></script>
