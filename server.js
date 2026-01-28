@@ -4,7 +4,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // Server start time for uptime tracking
 const serverStartTime = Date.now();
@@ -12,6 +12,13 @@ const serverStartTime = Date.now();
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// CORS support for external access
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+});
 
 // API Configuration
 const FF_SCOUTER_KEY = process.env.FF_SCOUTER_KEY;
