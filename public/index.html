@@ -467,15 +467,15 @@
                 </div>
             </div>
             <div class="button-group">
-                <button class="btn-primary" onclick="runTacticalScan()">
+                <button class="btn-primary" id="btn-scan">
                     <span>🔍</span>
                     <span>Start Scan</span>
                 </button>
-                <button class="btn-secondary" onclick="showReport()">
+                <button class="btn-secondary" id="btn-report">
                     <span>📊</span>
                     <span>View Report</span>
                 </button>
-                <button class="btn-secondary" onclick="navigateToWarAnalysis()">
+                <button class="btn-secondary" id="btn-war-analysis">
                     <span>⚡</span>
                     <span>War Analysis</span>
                 </button>
@@ -521,16 +521,16 @@
             <div class="section-header">
                 <h2 class="section-title" id="section-title">Ready to Scan</h2>
                 <div class="filter-buttons" id="filter-buttons" style="display:none;">
-                    <button class="filter-btn active" onclick="filterTargets('all')">All</button>
-                    <button class="filter-btn" onclick="filterTargets('secure')">Secure</button>
-                    <button class="filter-btn" onclick="filterTargets('prime')">Prime</button>
-                    <button class="filter-btn" onclick="filterTargets('risky')">Risky</button>
-                    <button class="filter-btn" onclick="filterTargets('suicide')">Suicide</button>
+                    <button class="filter-btn active" data-tier="all">All</button>
+                    <button class="filter-btn" data-tier="secure">Secure</button>
+                    <button class="filter-btn" data-tier="prime">Prime</button>
+                    <button class="filter-btn" data-tier="risky">Risky</button>
+                    <button class="filter-btn" data-tier="suicide">Suicide</button>
                 </div>
             </div>
             <div id="targets-grid" class="targets-grid">
                 <div class="empty-state">
-                    <div class="empty-state-icon">🎯</div>
+                    <div class="empty-state-icon" role="img" aria-label="Target icon">🎯</div>
                     <h3>No Targets Scanned Yet</h3>
                     <p>Enter your credentials above and click "Start Scan" to begin tactical analysis</p>
                 </div>

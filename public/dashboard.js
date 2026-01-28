@@ -107,14 +107,16 @@ function renderTargets(filter = 'all') {
 }
 
 // Filter targets by tier
-function filterTargets(tier) {
+function filterTargets(tier, event) {
     SESSION.currentFilter = tier;
     
     // Update active button
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.classList.remove('active');
     });
-    event.target.classList.add('active');
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
     
     renderTargets(tier);
 }
@@ -210,7 +212,12 @@ async function runTacticalScan() {
             updateStatsOverview();
             renderTargets('all');
             document.getElementById('filter-buttons').style.display = 'flex';
-            showAlert(`Scan complete! Analyzed ${SESSION.data.length} targets.`, 'success');
+            
+            let successMsg = `Scan complete! Analyzed ${SESSION.data.length} targets.`;
+            if (failedCount > 0) {
+                successMsg += ` (${failedCount} targets unavailable)`;
+            }
+            showAlert(successMsg, 'success');
         }, 500);
         
     } catch (error) {
@@ -303,4 +310,17 @@ window.onload = function() {
             document.getElementById('section-title').textContent = 'Previous Scan Results';
         }
     }
+    
+    // Set up event listeners
+    document.getElementById('btn-scan').addEventListener('click', runTacticalScan);
+    document.getElementById('btn-report').addEventListener('click', showReport);
+    document.getElementById('btn-war-analysis').addEventListener('click', navigateToWarAnalysis);
+    
+    // Set up filter button listeners
+    document.getElementById('filter-buttons').addEventListener('click', function(e) {
+        if (e.target.classList.contains('filter-btn')) {
+            const tier = e.target.dataset.tier;
+            filterTargets(tier, e);
+        }
+    });
 };
