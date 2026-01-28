@@ -1,41 +1,42 @@
-// war-analysis.js
+// FF Scouter Analysis Implementation
 
-function calculateRespect(battleStats) {
-    // Logic for calculating respect based on battle stats
-    // Placeholder implementation
-    return battleStats / 1000000; // Example calculation
+function calculateBaseRespect(level) {
+    return (Math.log(level) + 1.0) / 4.0;
 }
 
-function calculateFFMultipliers(battleStats) {
-    // Logic for calculating FF multipliers based on battle stats
-    // Placeholder implementation
-    return battleStats * 0.1; // Example calculation
+function calculateFFMultiplier(defenderBS, attackerBS) {
+    let multiplier = 1 + (8/3) * (defenderBS / attackerBS);
+    return Math.max(1, Math.min(multiplier, 3));
 }
 
-function categorizeTargets(battleStats) {
-    if (battleStats < 75000000) {
-        return 'Safe';
-    } else if (battleStats < 80000000) {
-        return 'Prime';
-    } else if (battleStats < 85000000) {
-        return 'Risky';
+function calculateExpectedRespect(baseR, fairFight) {
+    return baseR * fairFight * 1.25;
+}
+
+function categorizeTarget(value) {
+    if (value < 100) {
+        return { category: 'SAFE', advice: 'Low risk, proceed with caution.' };
+    } else if (value < 200) {
+        return { category: 'PRIME', advice: 'Good target, high chance of success.' };
+    } else if (value < 300) {
+        return { category: 'RISKY', advice: 'Medium risk, consider your options.' };
     } else {
-        return 'Suicide';
+        return { category: 'SUICIDE', advice: 'High risk, avoid this target.' };
     }
 }
 
-function analyzeBattle(battleStats) {
-    const respect = calculateRespect(battleStats);
-    const ffMultiplier = calculateFFMultipliers(battleStats);
-    const category = categorizeTargets(battleStats);
-
-    return {
-        respect,
-        ffMultiplier,
-        category
-    };
+function analyzeTarget(target) {
+    // Implement individual target analysis logic here
 }
 
-// Example usage for battle stats of 72M and 82M
-console.log(analyzeBattle(72000000)); // For 72M
-console.log(analyzeBattle(82000000)); // For 82M
+function analyzeFaction(faction) {
+    // Implement analysis for all faction members here
+}
+
+function generateWarReport(scenario) {
+    if (scenario === '72M') {
+        // Report logic for 72M scenario
+    } else if (scenario === '82M') {
+        // Report logic for 82M scenario
+    }
+}
