@@ -34,6 +34,28 @@ node server.js
 
 ## ⚠️ Getting Errors?
 
+### 🔍 **RUN THE DIAGNOSTIC TOOL FIRST!**
+
+**Windows:**
+```bash
+diagnose.bat
+```
+
+**Mac/Linux:**
+```bash
+./diagnose.sh
+```
+
+This will check:
+- ✅ Are you in the right folder?
+- ✅ Is Node.js installed?
+- ✅ Are all files present?
+- ✅ Are dependencies installed?
+
+Then follow the recommendations it gives you!
+
+---
+
 **See [TROUBLESHOOTING.md](TROUBLESHOOTING.md)** for solutions to common problems:
 - "No such file or directory"
 - "npm: command not found"
