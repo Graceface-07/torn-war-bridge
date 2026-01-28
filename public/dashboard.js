@@ -1,6 +1,26 @@
 // Session storage for tactical scan data
 let SESSION = { data: [], myStats: 0, uid: null, factionId: null, currentFilter: 'all' };
 
+// Server status checker
+async function checkServerStatus() {
+    try {
+        const response = await fetch('/api/health');
+        const data = await response.json();
+        
+        if (data.status === 'OK') {
+            document.getElementById('server-status').textContent = '● ONLINE';
+            document.getElementById('server-status').style.color = '#10b981';
+            document.getElementById('server-status-pill').title = `Uptime: ${data.uptime}`;
+        }
+    } catch (error) {
+        document.getElementById('server-status').textContent = '● OFFLINE';
+        document.getElementById('server-status').style.color = '#ef4444';
+    }
+}
+
+// Check status every 10 seconds
+setInterval(checkServerStatus, 10000);
+
 // Utility function to format numbers
 function formatNum(n) {
     if (!n || isNaN(n)) return '0';

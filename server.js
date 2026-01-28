@@ -6,6 +6,9 @@ require('dotenv').config();
 const app = express();
 const port = 3000;
 
+// Server start time for uptime tracking
+const serverStartTime = Date.now();
+
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -23,6 +26,25 @@ function validateNumericId(id) {
 if (!FF_SCOUTER_KEY || !TORN_API_KEY) {
     console.error('WARNING: API keys not configured. Please set FF_SCOUTER_KEY and TORN_API_KEY in .env file');
 }
+
+// Health check / Status endpoint
+app.get('/api/health', (req, res) => {
+    const uptime = Math.floor((Date.now() - serverStartTime) / 1000);
+    const uptimeMinutes = Math.floor(uptime / 60);
+    const uptimeSeconds = uptime % 60;
+    
+    res.json({
+        status: 'OK',
+        message: 'Server is running',
+        uptime: `${uptimeMinutes}m ${uptimeSeconds}s`,
+        uptimeSeconds: uptime,
+        timestamp: new Date().toISOString(),
+        apiKeys: {
+            ffScouter: !!FF_SCOUTER_KEY,
+            tornApi: !!TORN_API_KEY
+        }
+    });
+});
 
 // API Endpoints
 
@@ -112,5 +134,18 @@ app.get('/', (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+    console.log(`
+╔════════════════════════════════════════╗
+║   🎯 TORN WAR BRIDGE - SERVER RUNNING  ║
+╚════════════════════════════════════════╝
+
+✅ Server Status: ONLINE
+🌐 URL: http://localhost:${port}
+📊 Health Check: http://localhost:${port}/api/health
+⏰ Started: ${new Date().toLocaleString()}
+
+${!FF_SCOUTER_KEY || !TORN_API_KEY ? '⚠️  WARNING: API keys not configured\n   Create .env file with API keys for full functionality\n' : '✅ API Keys: Configured'}
+Ready to accept connections!
+Press Ctrl+C to stop
+    `);
 });

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Server Status - Torn War Bridge</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0f172a;
+            color: #f1f5f9;
+        }
+        .status-box {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            border: 2px solid #334155;
+        }
+        .status-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        .online {
+            color: #10b981;
+        }
+        .offline {
+            color: #ef4444;
+        }
+        h1 {
+            margin-top: 0;
+        }
+        .info {
+            background: #334155;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        .button {
+            display: inline-block;
+            background: #6366f1;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .button:hover {
+            background: #4f46e5;
+        }
+    </style>
+</head>
+<body>
+    <div class="status-box">
+        <div class="status-icon online" id="status-icon">✅</div>
+        <h1 id="status-text">Server is Running!</h1>
+        <p id="status-detail">The Torn War Bridge server is online and responding.</p>
+        
+        <div class="info" id="server-info">
+            <strong>Server Information:</strong><br>
+            Loading...
+        </div>
+        
+        <a href="/" class="button">Go to Dashboard →</a>
+    </div>
+    
+    <script>
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                
+                document.getElementById('status-icon').textContent = '✅';
+                document.getElementById('status-icon').className = 'status-icon online';
+                document.getElementById('status-text').textContent = 'Server is Running!';
+                document.getElementById('status-detail').textContent = 'The Torn War Bridge server is online and responding.';
+                document.getElementById('server-info').innerHTML = `
+                    <strong>Server Information:</strong><br>
+                    Status: ${data.status}<br>
+                    Uptime: ${data.uptime}<br>
+                    Started: ${new Date(data.timestamp).toLocaleString()}<br>
+                    API Keys: ${data.apiKeys.ffScouter && data.apiKeys.tornApi ? 'Configured ✓' : 'Not Configured ⚠'}
+                `;
+            } catch (error) {
+                document.getElementById('status-icon').textContent = '❌';
+                document.getElementById('status-icon').className = 'status-icon offline';
+                document.getElementById('status-text').textContent = 'Server is Offline';
+                document.getElementById('status-detail').textContent = 'Cannot connect to the server. Make sure it\'s running.';
+                document.getElementById('server-info').innerHTML = `
+                    <strong>Error:</strong><br>
+                    ${error.message}<br><br>
+                    <strong>To start the server:</strong><br>
+                    1. Open terminal in the project folder<br>
+                    2. Run: npm install<br>
+                    3. Run: node server.js
+                `;
+            }
+        }
+        
+        checkStatus();
+        setInterval(checkStatus, 5000);
+    </script>
+</body>
+</html>
