@@ -1,31 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>War Analysis Dashboard</title>
-    <script src="https://path-to-your-dashboard-data.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>War Analysis Report Generator</title>
     <script>
-        // Function to analyze faction data
-        function analyzeFactionData() {
-            // Fetch data from your dashboard
-            // This is a placeholder for the actual data fetching logic
-            const factionData = fetchDashboardData();
-            let analysisResults = '';
+        function calculateRespect() {
+            const battleStats = parseFloat(document.getElementById('battleStats').value);
+            const faction = 38761;
+            let results = '';
 
-            // Analyze and format results for display
-            factionData.forEach(faction => {
-                analysisResults += `<div>${faction.name}: ${faction.analysis}</div>`;
-            });
+            if (battleStats) {
+                results += `Respect calculations for faction ${faction}:\n`;
+                results += `Safe Target Respect: \${(battleStats * 1.1).toFixed(2)}\n`;
+                results += `Prime Target Respect: \${(battleStats * 1.5).toFixed(2)}\n`;
+                results += `Risky Target Respect: \${(battleStats * 2).toFixed(2)}\n`;
+                results += `Suicide Target Respect: \${(battleStats * 3).toFixed(2)}\n`;
+            } else {
+                results = 'Please enter valid battle stats.';
+            }
 
-            document.getElementById('faction-analysis').innerHTML = analysisResults;
+            document.getElementById('results').innerText = results;
         }
-
-        window.onload = function() {
-            analyzeFactionData();
-        };
     </script>
 </head>
 <body>
-    <h1>Faction Analysis Results</h1>
-    <div id="faction-analysis">Loading...</div>
+    <h1>Interactive War Analysis Report Generator</h1>
+    <label for="battleStats">Enter Your Battle Stats:</label>
+    <input type="number" id="battleStats" required>
+    <button onclick="calculateRespect()">Generate Respect Calculations</button>
+    <h2>Results:</h2>
+    <pre id="results"></pre>
 </body>
 </html>
