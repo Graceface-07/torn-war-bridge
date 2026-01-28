@@ -1,35 +1,35 @@
 // Torn War Bridge - Dashboard JavaScript
-const FACTION_KEY = 'CZP2D2ZnbXWsYiDT';  // Has faction access
-const SCOUTER_KEY = 'rwLgZTyqgWDxhoCx';  // Has member/scouting access
+const TORN_API_KEY = 'CZP2D2ZnbXWsYiDT';
+const SC_KEY = 'rwLgZTyqgWDxhoCx';
 
-// Fetch faction data (v2 API)
+// Fetch faction data
 async function fetchFactionData() {
     try {
-        const response = await fetch(`https://api.torn.com/v2/faction/?key=${FACTION_KEY}`);
+        const response = await fetch(`https://api.torn.com/faction/?selections=basic,members&key=${TORN_API_KEY}`);
         const data = await response.json();
         
         if (data.error) {
-            document.getElementById('factionData').innerHTML = `<p>Error: ${data.error.message}</p>`;
+            document.getElementById('factionData').innerHTML = `<p>Error: ${data.error.error}</p>`;
             return;
         }
 
         const html = `
-            <p><strong>Faction:</strong> ${data.faction.name}</p>
-            <p><strong>Leader:</strong> ${data.faction.leader}</p>
-            <p><strong>Members:</strong> ${data.faction.members_count}</p>
-            <p><strong>Respect:</strong> ${data.faction.respect.toLocaleString()}</p>
+            <p><strong>Faction:</strong> ${data.name}</p>
+            <p><strong>Leader:</strong> ${data.leader}</p>
+            <p><strong>Members:</strong> ${data.members_count}</p>
+            <p><strong>Respect:</strong> ${data.respect.toLocaleString()}</p>
         `;
         
         document.getElementById('factionData').innerHTML = html;
     } catch (error) {
-        document.getElementById('factionData').innerHTML = `<p>Error: ${error.message}</p>`;
+        document.getElementById('factionData').innerHTML = `<p>Error loading faction data: ${error.message}</p>`;
     }
 }
 
 // Fetch member stats
 async function fetchMemberStats() {
     try {
-        const response = await fetch(`https://api.torn.com/user/?selections=basic,stats&key=${SCOUTER_KEY}`);
+        const response = await fetch(`https://api.torn.com/user/?selections=basic,stats&key=${TORN_API_KEY}`);
         const data = await response.json();
         
         if (data.error) {
@@ -47,14 +47,14 @@ async function fetchMemberStats() {
         
         document.getElementById('memberData').innerHTML = html;
     } catch (error) {
-        document.getElementById('memberData').innerHTML = `<p>Error: ${error.message}</p>`;
+        document.getElementById('memberData').innerHTML = `<p>Error loading member data: ${error.message}</p>`;
     }
 }
 
 // Fetch weapon info
 async function fetchWeaponInfo() {
     try {
-        const response = await fetch(`https://api.torn.com/torn/?selections=items&key=${SCOUTER_KEY}`);
+        const response = await fetch(`https://api.torn.com/torn/?selections=items&key=${TORN_API_KEY}`);
         const data = await response.json();
         
         if (data.error) {
@@ -74,7 +74,7 @@ async function fetchWeaponInfo() {
         
         document.getElementById('weaponData').innerHTML = html;
     } catch (error) {
-        document.getElementById('weaponData').innerHTML = `<p>Error: ${error.message}</p>`;
+        document.getElementById('weaponData').innerHTML = `<p>Error loading weapon data: ${error.message}</p>`;
     }
 }
 

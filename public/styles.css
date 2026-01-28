@@ -1,0 +1,101 @@
+/* Main Dashboard Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #e0e0e0;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    padding: 40px 20px;
+    border-bottom: 3px solid #00d4ff;
+    margin-bottom: 40px;
+}
+
+header h1 {
+    font-size: 3em;
+    color: #00d4ff;
+    text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    margin-bottom: 10px;
+}
+
+header p {
+    font-size: 1.2em;
+    color: #b0b0b0;
+}
+
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.card {
+    background: rgba(30, 40, 60, 0.8);
+    border: 2px solid #00d4ff;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 8px 32px rgba(0, 212, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 48px rgba(0, 212, 255, 0.2);
+    border-color: #00ff88;
+}
+
+.card h2 {
+    color: #00d4ff;
+    margin-bottom: 15px;
+    font-size: 1.5em;
+}
+
+.card div {
+    color: #c0c0c0;
+    font-size: 0.95em;
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    border-top: 2px solid #00d4ff;
+    color: #808080;
+    margin-top: 40px;
+}
+
+/* Loading state */
+.loading {
+    display: inline-block;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 2em;
+    }
+    
+    .dashboard {
+        grid-template-columns: 1fr;
+    }
+}

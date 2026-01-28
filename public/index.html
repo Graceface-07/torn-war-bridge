@@ -1,1 +1,42 @@
-<!DOCTYPE html>\n<html lang="en">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>Tactical Dashboard</title>\n    <link rel="stylesheet" href="styles.css">\n</head>\n<body>\n    <div class="entry-modal">\n        <form>\n            <label for="faction">Faction:</label>\n            <select id="faction">\n                <option value="38761">Faction 1</option>\n                <option value="42505">Faction 2</option>\n            </select>\n            <button type="submit">Enter</button>\n        </form>\n    </div>\n    <div class="dashboard-layout">\n        <header>\n            <h1>Tactical Dashboard</h1>\n        </header>\n        <main>\n            <div class="member-cards">\n                <h2>Members</h2>\n                <!-- Member cards will go here -->\n            </div>\n            <div class="rank-war-analysis">\n                <h2>Rank War Analysis</h2>\n                <!-- Analysis elements will go here -->\n            </div>\n            <div class="filters">\n                <h2>Filters</h2>\n                <!-- Filter options will go here -->\n            </div>\n            <div class="status-indicators">\n                <h2>Status Indicators</h2>\n                <!-- Status indicators will go here -->\n            </div>\n            <div class="data-logger-popup">\n                <h2>Data Logger</h2>\n                <!-- Logger elements will go here -->\n            </div>\n        </main>\n        <nav class="multi-panel-navigation">\n            <ul>\n                <li><a href="#">Panel 1</a></li>\n                <li><a href="#">Panel 2</a></li>\n                <li><a href="#">Panel 3</a></li>\n            </ul>\n        </nav>\n    </div>\n    <script src="script.js"></script>\n</body>\n</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torn War Bridge - Tactical Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 Torn War Bridge</h1>
+            <p>Automated Tactical Dashboard</p>
+        </header>
+
+        <main>
+            <section class="dashboard">
+                <div class="card faction-info">
+                    <h2>Faction Overview</h2>
+                    <div id="factionData">Loading faction data...</div>
+                </div>
+
+                <div class="card member-stats">
+                    <h2>Member Statistics</h2>
+                    <div id="memberData">Loading member data...</div>
+                </div>
+
+                <div class="card weapon-info">
+                    <h2>Weapon Arsenal</h2>
+                    <div id="weaponData">Loading weapon data...</div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Torn War Bridge v1.0 | Real-time tactical intelligence</p>
+        </footer>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>
