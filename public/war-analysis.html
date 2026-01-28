@@ -1,51 +1,27 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>War Analysis</title>
-    <script src="../war-analysis.js"></script>
-</head>
-<body>
-    <h1>War Analysis</h1>
-    <div id="player-data"></div>
-    <div id="faction-data"></div>
-    <button id="analyze-button">Analyze Battle</button>
-    <div id="results"></div>
+// Retrieve cached player and faction data from localStorage on page load
+window.onload = function() {
+    const playerData = JSON.parse(localStorage.getItem('playerData'));
+    const factionData = JSON.parse(localStorage.getItem('factionData'));
 
-    <script>
-        document.getElementById('analyze-button').addEventListener('click', function() {
-            // Pull data from the dashboard
-            const playerData = getPlayerData(); // This function should be implemented to pull data
-            const factionData = getFactionData(); // This function should be implemented to pull data
+    // Run analysis for 72M and 82M battle stat scenarios
+    runAnalysis(72, playerData, factionData);
+    runAnalysis(82, playerData, factionData);
+};
 
-            // Analyze both scenarios
-            const results72M = analyzeBattle(playerData, factionData, 72000000);
-            const results82M = analyzeBattle(playerData, factionData, 82000000);
+// Function to run the analysis
+function runAnalysis(battleSize, playerData, factionData) {
+    const results = analyzeBattleStats(battleSize, playerData, factionData);
+    displayResults(results);
+}
 
-            // Display results
-            displayResults(results72M, '72M');
-            displayResults(results82M, '82M');
-        });
+// Function to analyze battle stats
+function analyzeBattleStats(battleSize, playerData, factionData) {
+    // Logic to categorize targets (SAFE/PRIME/RISKY/SUICIDE)
+    // Calculate respect values, FF multipliers, and tactical advice
+    // return results object with all necessary data
+}
 
-        function displayResults(results, scenario) {
-            const resultsDiv = document.getElementById('results');
-            const resultHtml = `<h2>${scenario} Results</h2>` +
-                `<p>Respect Values: ${results.respectValues}</p>` +
-                `<p>FF Multipliers: ${results.ffMultipliers}</p>` +
-                `<p>Category: ${results.category}</p>`;
-            resultsDiv.insertAdjacentHTML('beforeend', resultHtml);
-        }
-
-        function getPlayerData() {
-            // Placeholder for pulling player data
-            return {}; // Replace with actual data retrieval logic
-        }
-
-        function getFactionData() {
-            // Placeholder for pulling faction data
-            return {}; // Replace with actual data retrieval logic
-        }
-    </script>
-</body>
-</html>
+// Function to display results
+function displayResults(results) {
+    // Logic to format and display the results on the web page
+}
