@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: torn-war-bridge
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: FF_SCOUTER_KEY
+        sync: false
+      - key: TORN_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production

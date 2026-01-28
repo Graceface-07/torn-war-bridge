@@ -12,7 +12,21 @@
 
 ---
 
-## 🚀 Quick Start
+## 🌐 Need External URL / Remote Access?
+
+**Want to access from anywhere, not just your computer?**
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for:
+- ✅ 1-Click deployment to Vercel (free)
+- ✅ Railway, Render, Heroku options
+- ✅ Ngrok for quick testing
+- ✅ Get a public URL like `your-app.vercel.app`
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Graceface-07/torn-war-bridge)
+
+---
+
+## 🚀 Quick Start (Local Use)
 
 ### For Windows Users:
 ```bash
