@@ -3,31 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>War Analysis Report</title>
+    <title>War Analysis</title>
+    <script src="../war-analysis.js"></script>
 </head>
 <body>
-    <h1>Interactive War Analysis Report</h1>
-    <form id="battleStatsForm">
-        <label for="battleStats">Enter Battle Stats:</label><br>
-        <input type="text" id="battleStats" name="battleStats" placeholder="e.g. Win/Loss: 5/3"><br><br>
-        <input type="submit" value="Calculate Respect Values">
-    </form>
-    <div id="result"></div>
+    <h1>War Analysis</h1>
+    <div id="player-data"></div>
+    <div id="faction-data"></div>
+    <button id="analyze-button">Analyze Battle</button>
+    <div id="results"></div>
 
     <script>
-        document.getElementById('battleStatsForm').onsubmit = function(event) {
-            event.preventDefault();
-            const stats = document.getElementById('battleStats').value;
-            // Logic to calculate respect values based on stats
-            const respectValue = calculateRespect(stats); // Placeholder function
-            document.getElementById('result').innerText = 'Calculated Respect Value: ' + respectValue;
-        };
+        document.getElementById('analyze-button').addEventListener('click', function() {
+            // Pull data from the dashboard
+            const playerData = getPlayerData(); // This function should be implemented to pull data
+            const factionData = getFactionData(); // This function should be implemented to pull data
 
-        function calculateRespect(stats) {
-            // Parse the input and calculate respect value logic here
-            // This is a simplified example, actual logic depends on the rules defined
-            const values = stats.split('/').map(Number);
-            return (values[0] / (values[0] + values[1])) * 100; // Example calculation
+            // Analyze both scenarios
+            const results72M = analyzeBattle(playerData, factionData, 72000000);
+            const results82M = analyzeBattle(playerData, factionData, 82000000);
+
+            // Display results
+            displayResults(results72M, '72M');
+            displayResults(results82M, '82M');
+        });
+
+        function displayResults(results, scenario) {
+            const resultsDiv = document.getElementById('results');
+            const resultHtml = `<h2>${scenario} Results</h2>` +
+                `<p>Respect Values: ${results.respectValues}</p>` +
+                `<p>FF Multipliers: ${results.ffMultipliers}</p>` +
+                `<p>Category: ${results.category}</p>`;
+            resultsDiv.insertAdjacentHTML('beforeend', resultHtml);
+        }
+
+        function getPlayerData() {
+            // Placeholder for pulling player data
+            return {}; // Replace with actual data retrieval logic
+        }
+
+        function getFactionData() {
+            // Placeholder for pulling faction data
+            return {}; // Replace with actual data retrieval logic
         }
     </script>
 </body>
