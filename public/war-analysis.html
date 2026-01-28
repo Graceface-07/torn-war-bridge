@@ -1,27 +1,64 @@
-// Retrieve cached player and faction data from localStorage on page load
-window.onload = function() {
-    const playerData = JSON.parse(localStorage.getItem('playerData'));
-    const factionData = JSON.parse(localStorage.getItem('factionData'));
-
-    // Run analysis for 72M and 82M battle stat scenarios
-    runAnalysis(72, playerData, factionData);
-    runAnalysis(82, playerData, factionData);
-};
-
-// Function to run the analysis
-function runAnalysis(battleSize, playerData, factionData) {
-    const results = analyzeBattleStats(battleSize, playerData, factionData);
-    displayResults(results);
-}
-
-// Function to analyze battle stats
-function analyzeBattleStats(battleSize, playerData, factionData) {
-    // Logic to categorize targets (SAFE/PRIME/RISKY/SUICIDE)
-    // Calculate respect values, FF multipliers, and tactical advice
-    // return results object with all necessary data
-}
-
-// Function to display results
-function displayResults(results) {
-    // Logic to format and display the results on the web page
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>War Analysis Report</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>War Analysis Report</h1>
+        <p>Date: 2026-01-28</p>
+    </header>
+    <main>
+        <section id="verdict">
+            <h2>Verdict</h2>
+            <p>...</p>  <!-- Add specific verdict content here -->
+        </section>
+        <section id="recommendations">
+            <h2>Recommendations</h2>
+            <ul>
+                <li>...</li> <!-- List recommendations here -->
+            </ul>
+        </section>
+        <section id="stats-grid">
+            <h2>Statistics Grid</h2>
+            <table>
+                <tr>
+                    <th>Stat Name</th>
+                    <th>Value</th>
+                </tr>
+                <tr>
+                    <td>Example Stat</td>
+                    <td>Value</td>
+                </tr>
+                <!-- Add more stats here -->
+            </table>
+        </section>
+        <section id="tier-breakdown">
+            <h2>Tier Breakdown</h2>
+            <div class="tier">
+                <h3>Tier 1</h3>
+                <p>Details about Tier 1.</p>
+            </div>
+            <!-- Add more tiers as needed -->
+        </section>
+        <section id="simulated-lineup">
+            <h2>Simulated 20-Hit Lineup</h2>
+            <ul>
+                <li>...</li> <!-- List simulated hits here -->
+            </ul>
+        </section>
+        <section id="beatable-targets">
+            <h2>Beatable Targets</h2>
+            <ul>
+                <li>...</li> <!-- List beatable targets here -->
+            </ul>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2026 War Analysis Company</p>
+    </footer>
+</body>
+</html>
