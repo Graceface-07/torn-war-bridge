@@ -2,20 +2,20 @@
 
 **Modern Command Hub Dashboard** for tactical war analysis in Torn City.
 
-## 🚀 Quick Start (Offline & Stable)
+![Torn War Bridge Dashboard](https://github.com/user-attachments/assets/bfaed7d7-00a3-4a83-84c4-ac5d47a2ac15)
 
-### Option 1: One-Command Start (Recommended)
+## 🚀 Quick Start
+
+**Three simple commands:**
 ```bash
-./start.sh
+git clone https://github.com/Graceface-07/torn-war-bridge.git
+cd torn-war-bridge
+npm install && node server.js
 ```
 
-### Option 2: Manual Start
-```bash
-npm install
-node server.js
-```
+**Then open:** http://localhost:3000
 
-Then open your browser to: **http://localhost:3000**
+> 📖 See [SETUP.md](SETUP.md) for detailed setup guide
 
 ## ✨ What You Get
 
