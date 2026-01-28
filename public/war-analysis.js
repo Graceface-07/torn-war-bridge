@@ -1,37 +1,41 @@
 // war-analysis.js
 
-/**
- * War Analysis Calculations
- * This file contains functions for respect estimation, target categorization, 
- * and report generation based on player stats and enemy faction data.
- */
-
-// Function to estimate respect based on player stats
-function estimateRespect(playerStats) {
-    // Example calculation
-    let respect = (playerStats.wins * 10) - (playerStats.losses * 5);
-    return respect > 0 ? respect : 0;
+function calculateRespect(battleStats) {
+    // Logic for calculating respect based on battle stats
+    // Placeholder implementation
+    return battleStats / 1000000; // Example calculation
 }
 
-// Function to categorize target based on stats
-function categorizeTarget(targetStats) {
-    if (targetStats.threatLevel > 80) {
-        return 'High Threat';
-    } else if (targetStats.threatLevel > 50) {
-        return 'Medium Threat';
+function calculateFFMultipliers(battleStats) {
+    // Logic for calculating FF multipliers based on battle stats
+    // Placeholder implementation
+    return battleStats * 0.1; // Example calculation
+}
+
+function categorizeTargets(battleStats) {
+    if (battleStats < 75000000) {
+        return 'Safe';
+    } else if (battleStats < 80000000) {
+        return 'Prime';
+    } else if (battleStats < 85000000) {
+        return 'Risky';
     } else {
-        return 'Low Threat';
+        return 'Suicide';
     }
 }
 
-// Function to generate report based on player stats and enemy faction data
-function generateReport(playerStats, enemyFactionData) {
-    let respect = estimateRespect(playerStats);
-    let targetCategory = categorizeTarget(enemyFactionData);
-    return `Player Respect: ${respect}\nTarget Category: ${targetCategory}`;
+function analyzeBattle(battleStats) {
+    const respect = calculateRespect(battleStats);
+    const ffMultiplier = calculateFFMultipliers(battleStats);
+    const category = categorizeTargets(battleStats);
+
+    return {
+        respect,
+        ffMultiplier,
+        category
+    };
 }
 
-// Example usage:
-// const playerStats = { wins: 10, losses: 4 };
-// const enemyFactionData = { threatLevel: 75 };
-// console.log(generateReport(playerStats, enemyFactionData));
+// Example usage for battle stats of 72M and 82M
+console.log(analyzeBattle(72000000)); // For 72M
+console.log(analyzeBattle(82000000)); // For 82M
