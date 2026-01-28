@@ -1,0 +1,27 @@
+╔══════════════════════════════════════════════════════════╗
+║                 WHICH SCRIPT SHOWS A LINK?               ║
+╚══════════════════════════════════════════════════════════╝
+
+WEB DASHBOARD (most common):
+────────────────────────────────────────────────────────────
+Run:     run-web.bat  (Windows)
+    OR:  ./run-web.sh  (Mac/Linux)
+
+Shows:   http://localhost:3000
+
+Use:     Open in your web browser
+
+
+DISCORD BOT (for team use):
+────────────────────────────────────────────────────────────
+Run:     setup-bot.bat  (Windows)
+    OR:  ./setup-bot.sh  (Mac/Linux)
+
+Shows:   https://discord.com/api/oauth2/authorize?client_id=...
+
+Use:     Click to invite bot to Discord server
+
+
+╔══════════════════════════════════════════════════════════╗
+║  TL;DR: Run "run-web.bat" to get http://localhost:3000  ║
+╚══════════════════════════════════════════════════════════╝
