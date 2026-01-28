@@ -6,16 +6,42 @@
 
 ## 🚀 Quick Start
 
-**Three simple commands:**
+### For Windows Users:
 ```bash
 git clone https://github.com/Graceface-07/torn-war-bridge.git
 cd torn-war-bridge
-npm install && node server.js
+start.bat
+```
+
+### For Mac/Linux Users:
+```bash
+git clone https://github.com/Graceface-07/torn-war-bridge.git
+cd torn-war-bridge
+./start.sh
+```
+
+### Manual Method (All Platforms):
+```bash
+git clone https://github.com/Graceface-07/torn-war-bridge.git
+cd torn-war-bridge
+npm install
+node server.js
 ```
 
 **Then open:** http://localhost:3000
 
-> 📖 See [SETUP.md](SETUP.md) for detailed setup guide
+---
+
+## ⚠️ Getting Errors?
+
+**See [TROUBLESHOOTING.md](TROUBLESHOOTING.md)** for solutions to common problems:
+- "No such file or directory"
+- "npm: command not found"
+- "Cannot find module"
+- "Permission denied"
+- Port already in use
+
+> 📖 Also check [SETUP.md](SETUP.md) for detailed setup instructions
 
 ## ✨ What You Get
 
