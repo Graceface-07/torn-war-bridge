@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torn War Bridge - Command Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .stat-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--bg-card);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            background: var(--bg-card);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px var(--shadow);
+        }
+
+        .control-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .input-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: var(--bg-card-hover);
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: #fca5a5;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success);
+            color: #6ee7b7;
+        }
+
+        /* Progress Bar */
+        .progress-section {
+            background: var(--bg-card);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .progress-status {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .progress-percent {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-dark);
+            border-radius: 50px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #8b5cf6);
+            border-radius: 50px;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+
+        /* Stats Overview */
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .stat-card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Target Grid */
+        .targets-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .targets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .target-card {
+            background: var(--bg-card);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            border-left: 4px solid;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .target-card:hover {
+            background: var(--bg-card-hover);
+            transform: translateX(4px);
+        }
+
+        .target-card.secure { border-color: var(--success); }
+        .target-card.prime { border-color: var(--info); }
+        .target-card.risky { border-color: var(--warning); }
+        .target-card.suicide { border-color: var(--danger); }
+
+        .target-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.75rem;
+        }
+
+        .target-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .target-id {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .target-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-secure { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .badge-prime { background: rgba(59, 130, 246, 0.2); color: var(--info); }
+        .badge-risky { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        .badge-suicide { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+
+        .target-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .stat-item-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-item-value {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">⚔️ Torn War Bridge</div>
+            <div class="header-stats">
+                <div class="stat-pill">
+                    <div>
+                        <div class="stat-label">Operator</div>
+                        <div class="stat-value" id="op-name">Not Connected</div>
+                    </div>
+                </div>
+                <div class="stat-pill">
+                    <div>
+                        <div class="stat-label">Battle Stats</div>
+                        <div class="stat-value" id="op-stats">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <h2 class="control-title">🎯 Tactical Scanner</h2>
+            <div class="input-group">
+                <div class="input-wrapper">
+                    <label class="input-label">Your User ID</label>
+                    <input type="text" id="uid" placeholder="Enter your Torn user ID">
+                </div>
+                <div class="input-wrapper">
+                    <label class="input-label">Target Faction ID</label>
+                    <input type="text" id="fid" placeholder="Enter enemy faction ID">
+                </div>
+            </div>
+            <div class="button-group">
+                <button class="btn-primary" onclick="runTacticalScan()">
+                    <span>🔍</span>
+                    <span>Start Scan</span>
+                </button>
+                <button class="btn-secondary" onclick="showReport()">
+                    <span>📊</span>
+                    <span>View Report</span>
+                </button>
+                <button class="btn-secondary" onclick="navigateToWarAnalysis()">
+                    <span>⚡</span>
+                    <span>War Analysis</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Alerts -->
+        <div id="alert-container"></div>
+
+        <!-- Progress Bar -->
+        <div id="progress-container" class="progress-section" style="display:none;">
+            <div class="progress-header">
+                <span class="progress-status" id="p-status">Scanning...</span>
+                <span class="progress-percent" id="p-percent">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="p-fill"></div>
+            </div>
+        </div>
+
+        <!-- Stats Overview -->
+        <div id="stats-overview" class="stats-overview" style="display:none;">
+            <div class="stat-card">
+                <div class="stat-card-value" style="color: var(--success);" id="stat-secure">0</div>
+                <div class="stat-card-label">Secure Targets</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-value" style="color: var(--info);" id="stat-prime">0</div>
+                <div class="stat-card-label">Prime Targets</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-value" style="color: var(--warning);" id="stat-risky">0</div>
+                <div class="stat-card-label">Risky Targets</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-value" style="color: var(--danger);" id="stat-suicide">0</div>
+                <div class="stat-card-label">Suicide Targets</div>
+            </div>
+        </div>
+
+        <!-- Targets Section -->
+        <div class="targets-section">
+            <div class="section-header">
+                <h2 class="section-title" id="section-title">Ready to Scan</h2>
+                <div class="filter-buttons" id="filter-buttons" style="display:none;">
+                    <button class="filter-btn active" onclick="filterTargets('all')">All</button>
+                    <button class="filter-btn" onclick="filterTargets('secure')">Secure</button>
+                    <button class="filter-btn" onclick="filterTargets('prime')">Prime</button>
+                    <button class="filter-btn" onclick="filterTargets('risky')">Risky</button>
+                    <button class="filter-btn" onclick="filterTargets('suicide')">Suicide</button>
+                </div>
+            </div>
+            <div id="targets-grid" class="targets-grid">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🎯</div>
+                    <h3>No Targets Scanned Yet</h3>
+                    <p>Enter your credentials above and click "Start Scan" to begin tactical analysis</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>
