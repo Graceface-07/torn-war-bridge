@@ -14,6 +14,7 @@ class CommandHub {
         this.apiKey = localStorage.getItem('tornApiKey') || '';
         this.currentPlayerId = null;
         this.currentFactionId = null;
+        this.demoMode = false;
         this.init();
     }
 
@@ -25,6 +26,12 @@ class CommandHub {
     setupEventListeners() {
         // API Key management
         document.getElementById('saveApiKey').addEventListener('click', () => this.saveApiKey());
+        
+        // Demo mode button
+        const demoBtn = document.getElementById('demoMode');
+        if (demoBtn) {
+            demoBtn.addEventListener('click', () => this.loadDemoData());
+        }
         
         // Quick action buttons
         document.querySelectorAll('[data-action]').forEach(btn => {
@@ -95,7 +102,8 @@ class CommandHub {
     }
 
     async handleAction(action, forceRefresh = false) {
-        if (!this.apiKey) {
+        // Allow demo mode to bypass API key check
+        if (!this.apiKey && !this.demoMode) {
             this.showStatus('Please set your API key first', 'error');
             return;
         }
@@ -125,14 +133,33 @@ class CommandHub {
         }
     }
 
+    async loadDemoData() {
+        this.demoMode = true;
+        this.showStatus('Demo mode activated! Loading sample data...', 'success');
+        
+        try {
+            // Load all demo data
+            await this.loadPlayerStats();
+            await this.loadFactionInsights();
+            await this.loadWarAnalysis();
+            await this.loadMemberStats();
+            
+            this.showStatus('Demo data loaded successfully!', 'success');
+        } catch (error) {
+            this.showStatus(`Demo error: ${error.message}`, 'error');
+        }
+    }
+
     async loadPlayerStats(forceRefresh = false) {
-        if (forceRefresh) {
+        if (forceRefresh && !this.demoMode) {
             apiService.clearCache();
         }
 
         try {
-            // Fetch current user data
-            const playerData = await apiService.getPlayerData('', this.apiKey, 'profile,battlestats,personalstats');
+            // Fetch current user data (or use demo data)
+            const playerData = this.demoMode 
+                ? DemoData.getPlayerData() 
+                : await apiService.getPlayerData('', this.apiKey, 'profile,battlestats,personalstats');
             
             const content = document.getElementById('playerContent');
             content.innerHTML = `
@@ -186,23 +213,27 @@ class CommandHub {
     }
 
     async loadFactionInsights(forceRefresh = false) {
-        if (forceRefresh) {
+        if (forceRefresh && !this.demoMode) {
             apiService.clearCache();
         }
 
-        if (!this.currentFactionId) {
+        if (!this.currentFactionId && !this.demoMode) {
             // Try to get faction ID from player data first
             await this.loadPlayerStats();
         }
 
-        if (!this.currentFactionId) {
+        if (!this.currentFactionId && !this.demoMode) {
             document.getElementById('factionContent').innerHTML = 
                 '<p class="placeholder">You are not in a faction</p>';
             return;
         }
 
         try {
-            const factionData = await apiService.getFactionData(this.currentFactionId, this.apiKey, 'basic,territory,stats');
+            const factionData = this.demoMode 
+                ? DemoData.getFactionData() 
+                : await apiService.getFactionData(this.currentFactionId, this.apiKey, 'basic,territory,stats');
+            
+            const memberCount = factionData.members ? Object.keys(factionData.members).length : 0;
             
             const content = document.getElementById('factionContent');
             content.innerHTML = `
@@ -216,7 +247,7 @@ class CommandHub {
                 </div>
                 <div class="data-row">
                     <span class="data-label">Members:</span>
-                    <span class="data-value">${factionData.members?.length || 0}</span>
+                    <span class="data-value">${memberCount}</span>
                 </div>
                 <div class="data-row">
                     <span class="data-label">Respect:</span>
@@ -249,7 +280,7 @@ class CommandHub {
     }
 
     async loadWarAnalysis(forceRefresh = false) {
-        if (forceRefresh) {
+        if (forceRefresh && !this.demoMode) {
             apiService.clearCache();
         }
 
@@ -257,12 +288,48 @@ class CommandHub {
         
         try {
             // Get faction data for war analysis
-            if (!this.currentFactionId) {
+            if (!this.currentFactionId && !this.demoMode) {
                 await this.loadPlayerStats();
             }
 
-            if (!this.currentFactionId) {
+            if (!this.currentFactionId && !this.demoMode) {
                 content.innerHTML = '<p class="placeholder">No faction data available for war analysis</p>';
+                return;
+            }
+
+            if (this.demoMode) {
+                // Use pre-calculated demo war analysis
+                const warAnalysis = DemoData.getWarAnalysis();
+                
+                content.innerHTML = `
+                    <div class="data-row">
+                        <span class="data-label">Total Members:</span>
+                        <span class="data-value">${warAnalysis.totalMembers}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Active (24h):</span>
+                        <span class="data-value">${warAnalysis.activeMembers}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Best Chain:</span>
+                        <span class="data-value">${this.formatNumber(warAnalysis.bestChain)}</span>
+                    </div>
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <div class="label">Readiness</div>
+                            <div class="value">${warAnalysis.readiness}%</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="label">Total Respect</div>
+                            <div class="value">${this.formatNumber(warAnalysis.respect)}</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" style="margin-top: 15px; width: 100%;" onclick="commandHub.showWarDetails()">
+                        View Detailed Analysis
+                    </button>
+                `;
+                
+                localStorage.setItem('warAnalysis', JSON.stringify(warAnalysis));
                 return;
             }
 
@@ -321,22 +388,29 @@ class CommandHub {
     }
 
     async loadMemberStats(forceRefresh = false) {
-        if (forceRefresh) {
+        if (forceRefresh && !this.demoMode) {
             apiService.clearCache();
         }
 
-        if (!this.currentFactionId) {
+        if (!this.currentFactionId && !this.demoMode) {
             await this.loadPlayerStats();
         }
 
-        if (!this.currentFactionId) {
+        if (!this.currentFactionId && !this.demoMode) {
             document.getElementById('membersContent').innerHTML = 
                 '<p class="placeholder">No faction data available</p>';
             return;
         }
 
         try {
-            const memberStats = await apiService.getMemberStats(this.currentFactionId, this.apiKey);
+            const factionData = this.demoMode 
+                ? DemoData.getFactionData() 
+                : { members: (await apiService.getMemberStats(this.currentFactionId, this.apiKey)).members };
+            
+            const memberStats = {
+                totalMembers: Object.keys(factionData.members || {}).length,
+                members: factionData.members
+            };
             
             const members = Object.values(memberStats.members || {});
             const onlineMembers = members.filter(m => m.last_action?.status === 'Online').length;
@@ -421,15 +495,22 @@ class CommandHub {
     }
 
     async showMemberDetails() {
-        if (!this.currentFactionId) {
+        if (!this.currentFactionId && !this.demoMode) {
             return;
         }
 
         this.showLoading();
         
         try {
-            const memberStats = await apiService.getMemberStats(this.currentFactionId, this.apiKey);
-            const members = Object.values(memberStats.members || {});
+            let members;
+            
+            if (this.demoMode) {
+                const factionData = DemoData.getFactionData();
+                members = Object.values(factionData.members || {});
+            } else {
+                const memberStats = await apiService.getMemberStats(this.currentFactionId, this.apiKey);
+                members = Object.values(memberStats.members || {});
+            }
             
             const modalBody = document.getElementById('modalBody');
             modalBody.innerHTML = `

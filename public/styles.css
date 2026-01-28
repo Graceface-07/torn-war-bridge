@@ -121,6 +121,17 @@ body {
     background: #2980b9;
 }
 
+.btn-demo {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+}
+
+.btn-demo:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    box-shadow: 0 4px 15px rgba(118, 75, 162, 0.4);
+}
+
 .btn-action {
     background: var(--card-bg);
     color: var(--text-primary);
