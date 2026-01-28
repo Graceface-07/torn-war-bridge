@@ -22,9 +22,14 @@ if [ ! -f .env ]; then
     echo "📝 Creating .env file with API keys..."
     echo "FF_SCOUTER_KEY=rwLgZTyqgWDxhoCx" > .env
     echo "TORN_API_KEY=CZP2D2ZnbXWsYiDT" >> .env
-    echo "✅ API keys configured!"
+    echo "✅ .env file created!"
+    echo ""
+    echo "⚠️  IMPORTANT: These are DEFAULT API keys."
+    echo "   For production use, get your own keys from:"
+    echo "   - Torn API: https://www.torn.com/preferences.php#tab=api"
+    echo "   - FF Scouter: https://www.ffscouter.com/"
 else
-    echo "✅ API keys already configured"
+    echo "✅ .env file exists"
 fi
 
 echo ""

@@ -191,19 +191,25 @@ async function runTacticalScan() {
         // Step 3: Fetch scouter data for each member
         document.getElementById('p-status').textContent = 'Scanning targets...';
         let count = 0;
+        let failedCount = 0;
         
         for (const memberId of memberIds) {
             try {
                 const scouterData = await fetchScouterData(memberId, uid);
-                const scouterStats = Array.isArray(scouterData) ? scouterData[0] : scouterData;
                 
-                const stats = Number(scouterStats.bs_estimate) || 0;
-                const ff = Number(scouterStats.fair_fight) || 1.0;
+                // Handle new FF Scouter API format
+                const stats = Number(scouterData.estimated_battle_stats) || 
+                             Number(scouterData.battleScore) || 
+                             Number(scouterData.bs_estimate) || 0;
+                
+                const ff = Number(scouterData.fair_fight) || 1.0;
                 const tier = getTier(stats, SESSION.myStats);
                 
                 const memberData = {
                     id: memberId,
                     name: factionData.members[memberId].name || 'Unknown',
+                    level: factionData.members[memberId].level || 0,
+                    status: factionData.members[memberId].status || {},
                     stats: stats,
                     ff: ff,
                     tier: tier
@@ -213,12 +219,16 @@ async function runTacticalScan() {
                 
             } catch (error) {
                 console.error(`Error fetching data for member ${memberId}:`, error);
+                failedCount++;
             }
             
             count++;
             const pct = Math.round((count / memberIds.length) * 100);
             document.getElementById('p-fill').style.width = pct + '%';
             document.getElementById('p-percent').textContent = pct + '%';
+            
+            // Rate limiting - wait 100ms between requests
+            await new Promise(resolve => setTimeout(resolve, 100));
         }
         
         // Store data in localStorage for war analysis

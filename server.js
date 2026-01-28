@@ -71,16 +71,27 @@ app.get('/api/scouter/:targetId', async (req, res) => {
         }
         
         if (!FF_SCOUTER_KEY) {
-            return res.status(500).json({ error: 'FF Scouter API key not configured' });
+            return res.status(500).json({ 
+                error: 'FF Scouter API key not configured',
+                hint: 'Create a .env file with FF_SCOUTER_KEY=your_key_here'
+            });
         }
         
-        const url = `https://ffscouter.com/api/v1/get-stats?key=${FF_SCOUTER_KEY}&targets=${targetId}&user_id=${userId || 0}`;
+        // Updated FF Scouter API endpoint
+        const url = `https://www.ffscouter.com/api/v1/user/${targetId}/battlestats.json?key=${FF_SCOUTER_KEY}`;
         const response = await axios.get(url, { timeout: 10000 });
         
         res.json(response.data);
     } catch (error) {
         console.error('Error fetching scouter data:', error.message);
-        res.status(500).json({ error: 'Failed to fetch scouter data', details: error.message });
+        if (error.response) {
+            console.error('API Response:', error.response.status, error.response.data);
+        }
+        res.status(500).json({ 
+            error: 'Failed to fetch scouter data', 
+            details: error.message,
+            hint: error.response?.status === 403 ? 'Invalid FF Scouter API key' : 'User may not be in FF Scouter database'
+        });
     }
 });
 
@@ -95,10 +106,14 @@ app.get('/api/faction/:factionId/members', async (req, res) => {
         }
         
         if (!TORN_API_KEY) {
-            return res.status(500).json({ error: 'Torn API key not configured' });
+            return res.status(500).json({ 
+                error: 'Torn API key not configured',
+                hint: 'Create a .env file with TORN_API_KEY=your_key_here'
+            });
         }
         
-        const url = `https://api.torn.com/v2/faction/${factionId}/members?key=${TORN_API_KEY}`;
+        // Use Torn API v2 for faction members
+        const url = `https://api.torn.com/v2/faction/${factionId}?key=${TORN_API_KEY}`;
         const response = await axios.get(url, { timeout: 10000 });
         
         res.json({
@@ -107,11 +122,18 @@ app.get('/api/faction/:factionId/members', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching faction data:', error.message);
-        res.status(500).json({ error: 'Failed to fetch faction data', details: error.message });
+        if (error.response) {
+            console.error('API Response:', error.response.status, error.response.data);
+        }
+        res.status(500).json({ 
+            error: 'Failed to fetch faction data', 
+            details: error.message,
+            hint: error.response?.status === 403 ? 'Invalid API key' : 'Check if faction ID exists'
+        });
     }
 });
 
-// Get user basic info
+// Get user basic info with battle stats
 app.get('/api/user/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
@@ -122,16 +144,38 @@ app.get('/api/user/:userId', async (req, res) => {
         }
         
         if (!TORN_API_KEY) {
-            return res.status(500).json({ error: 'Torn API key not configured' });
+            return res.status(500).json({ 
+                error: 'Torn API key not configured',
+                hint: 'Create a .env file with TORN_API_KEY=your_key_here'
+            });
         }
         
-        const url = `https://api.torn.com/user/${userId}?selections=basic,profile&key=${TORN_API_KEY}`;
+        // Use Torn API v2 to get user data with battle stats
+        const url = `https://api.torn.com/v2/user/${userId}?key=${TORN_API_KEY}`;
         const response = await axios.get(url, { timeout: 10000 });
         
-        res.json(response.data);
+        // Return the user data with battle stats
+        res.json({
+            name: response.data.name || 'Unknown',
+            player_id: response.data.player_id,
+            level: response.data.level,
+            status: response.data.status,
+            strength: response.data.strength || 0,
+            defense: response.data.defense || 0,
+            speed: response.data.speed || 0,
+            dexterity: response.data.dexterity || 0,
+            battle_stats: response.data.battle_stats || {}
+        });
     } catch (error) {
         console.error('Error fetching user data:', error.message);
-        res.status(500).json({ error: 'Failed to fetch user data', details: error.message });
+        if (error.response) {
+            console.error('API Response:', error.response.status, error.response.data);
+        }
+        res.status(500).json({ 
+            error: 'Failed to fetch user data', 
+            details: error.message,
+            hint: error.response?.status === 403 ? 'Invalid API key' : 'Check if user ID exists'
+        });
     }
 });
 
