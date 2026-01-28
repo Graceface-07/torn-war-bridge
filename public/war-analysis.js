@@ -3,6 +3,34 @@
  * Provides ranked war analysis with improved structure and error handling
  */
 
+// Configuration constants
+const WAR_CONFIG = {
+    // Tier thresholds for player classification
+    TIER_S_THRESHOLD: 100000,
+    TIER_A_THRESHOLD: 50000,
+    TIER_B_THRESHOLD: 20000,
+    TIER_C_THRESHOLD: 5000,
+    
+    // Tier multipliers for respect calculation
+    TIER_MULTIPLIERS: {
+        'S': 5,
+        'A': 4,
+        'B': 3,
+        'C': 2,
+        'D': 1
+    },
+    
+    // Beatable range multipliers (lower and upper bounds)
+    BEATABLE_RANGE_MIN: 0.3,  // 30% of attacker's stats
+    BEATABLE_RANGE_MAX: 1.5,  // 150% of attacker's stats
+    
+    // Verdict thresholds
+    WIN_RATE_HIGH: 0.7,       // 70% win rate for highly favorable
+    WIN_RATE_MEDIUM: 0.5,     // 50% win rate for favorable
+    WIN_RATE_LOW: 0.3,        // 30% win rate for challenging
+    MIN_RESPECT_THRESHOLD: 100
+};
+
 /**
  * Calculate base respect for a target based on level and stats
  * @param {Object} target - Target player object
@@ -32,10 +60,10 @@ function assignRankedWarTier(player) {
     
     const total = player.total;
     
-    if (total >= 100000) return 'S';
-    if (total >= 50000) return 'A';
-    if (total >= 20000) return 'B';
-    if (total >= 5000) return 'C';
+    if (total >= WAR_CONFIG.TIER_S_THRESHOLD) return 'S';
+    if (total >= WAR_CONFIG.TIER_A_THRESHOLD) return 'A';
+    if (total >= WAR_CONFIG.TIER_B_THRESHOLD) return 'B';
+    if (total >= WAR_CONFIG.TIER_C_THRESHOLD) return 'C';
     return 'D';
 }
 
@@ -50,9 +78,8 @@ function calculateRankedWarRespect(attacker, defender) {
     const attackerTier = assignRankedWarTier(attacker);
     const defenderTier = assignRankedWarTier(defender);
     
-    // Tier multiplier
-    const tierDiff = { 'S': 5, 'A': 4, 'B': 3, 'C': 2, 'D': 1 };
-    const multiplier = tierDiff[defenderTier] / tierDiff[attackerTier];
+    // Calculate multiplier based on tier difference
+    const multiplier = WAR_CONFIG.TIER_MULTIPLIERS[defenderTier] / WAR_CONFIG.TIER_MULTIPLIERS[attackerTier];
     
     return Math.max(1, Math.round(baseRespect * multiplier));
 }
@@ -70,8 +97,8 @@ function getBeatablesRange(attacker) {
     const attackerTotal = attacker.total;
     
     return {
-        min: Math.round(attackerTotal * 0.3),
-        max: Math.round(attackerTotal * 1.5)
+        min: Math.round(attackerTotal * WAR_CONFIG.BEATABLE_RANGE_MIN),
+        max: Math.round(attackerTotal * WAR_CONFIG.BEATABLE_RANGE_MAX)
     };
 }
 
@@ -139,11 +166,11 @@ function calculateVerdict(analysis) {
         (m.attacker.total || 0) > (m.target.total || 0)
     ).length / analysis.lineup.length;
     
-    if (winRate >= 0.7 && totalRespect >= 100) {
+    if (winRate >= WAR_CONFIG.WIN_RATE_HIGH && totalRespect >= WAR_CONFIG.MIN_RESPECT_THRESHOLD) {
         return 'HIGHLY FAVORABLE - Strong chance of victory';
-    } else if (winRate >= 0.5) {
+    } else if (winRate >= WAR_CONFIG.WIN_RATE_MEDIUM) {
         return 'FAVORABLE - Good chance of success';
-    } else if (winRate >= 0.3) {
+    } else if (winRate >= WAR_CONFIG.WIN_RATE_LOW) {
         return 'CHALLENGING - Requires strategic coordination';
     } else {
         return 'UNFAVORABLE - Not recommended without reinforcements';
@@ -184,8 +211,9 @@ function analyzeRankedWar(factionData, enemyData) {
                 verdict.includes('FAVORABLE') ? 'Proceed with confidence' : 'Consider strategic planning',
                 'Monitor enemy activity before engagement'
             ],
+            // Use the strongest member as reference for beatable targets
             beatableTargets: filterBeatablesTargets(
-                members[0] || { total: 0 },
+                members.sort((a, b) => (b.total || 0) - (a.total || 0))[0] || { total: 0 },
                 enemies
             ).map(t => t.name || t.player_id)
         };

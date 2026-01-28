@@ -3,10 +3,16 @@
  * Centralized data-fetching logic with error handling and caching
  */
 
+// Configuration constants
+const API_CONFIG = {
+    CACHE_TIMEOUT: 5 * 60 * 1000, // 5 minutes in milliseconds
+    BASE_URL: 'https://api.torn.com'
+};
+
 class TornAPIService {
     constructor() {
         this.cache = new Map();
-        this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+        this.cacheTimeout = API_CONFIG.CACHE_TIMEOUT;
     }
 
     /**
@@ -28,7 +34,7 @@ class TornAPIService {
         }
 
         try {
-            const url = `https://api.torn.com/${endpoint}?key=${apiKey}`;
+            const url = `${API_CONFIG.BASE_URL}/${endpoint}?key=${apiKey}`;
             const response = await fetch(url, {
                 method: 'GET',
                 ...options

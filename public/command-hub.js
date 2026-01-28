@@ -3,6 +3,12 @@
  * Handles UI interactions and data presentation
  */
 
+// Configuration constants
+const HUB_CONFIG = {
+    ACTIVITY_WINDOW: 86400, // 24 hours in seconds
+    READINESS_THRESHOLD: 70  // Percentage threshold for good readiness
+};
+
 class CommandHub {
     constructor() {
         this.apiKey = localStorage.getItem('tornApiKey') || '';
@@ -265,7 +271,9 @@ class CommandHub {
             // Calculate basic war metrics
             const members = Object.values(factionData.members || {});
             const totalMembers = members.length;
-            const activeMembers = members.filter(m => m.last_action?.timestamp > Date.now() / 1000 - 86400).length;
+            const activeMembers = members.filter(m => 
+                m.last_action?.timestamp > Date.now() / 1000 - HUB_CONFIG.ACTIVITY_WINDOW
+            ).length;
             
             content.innerHTML = `
                 <div class="data-row">
@@ -401,7 +409,7 @@ class CommandHub {
                 
                 <h3 style="margin-top: 20px;">Recommendations</h3>
                 <ul style="margin-left: 20px;">
-                    <li>${warAnalysis.readiness > 70 ? 'Good readiness level' : 'Consider improving member activity'}</li>
+                    <li>${warAnalysis.readiness > HUB_CONFIG.READINESS_THRESHOLD ? 'Good readiness level' : 'Consider improving member activity'}</li>
                     <li>${warAnalysis.bestChain > 100 ? 'Strong chaining capability' : 'Work on improving chain attacks'}</li>
                     <li>Monitor member activity regularly</li>
                     <li>Coordinate war timing with active members</li>
