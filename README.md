@@ -4,6 +4,14 @@
 
 ![Torn War Bridge Dashboard](https://github.com/user-attachments/assets/bfaed7d7-00a3-4a83-84c4-ac5d47a2ac15)
 
+## 📍 **WHERE IS IT?**
+
+**GitHub:** https://github.com/Graceface-07/torn-war-bridge
+
+**See [WHERE_TO_FIND_EVERYTHING.md](WHERE_TO_FIND_EVERYTHING.md) for complete location guide!**
+
+---
+
 ## 🚀 Quick Start
 
 ### For Windows Users:
