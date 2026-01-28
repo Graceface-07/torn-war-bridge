@@ -2,7 +2,37 @@
 
 **Modern Command Hub Dashboard** for tactical war analysis in Torn City.
 
-## Features
+## 🚀 Quick Start (Offline & Stable)
+
+### Option 1: One-Command Start (Recommended)
+```bash
+./start.sh
+```
+
+### Option 2: Manual Start
+```bash
+npm install
+node server.js
+```
+
+Then open your browser to: **http://localhost:3000**
+
+## ✨ What You Get
+
+This runs **100% locally on your machine** - no cloud services needed!
+
+- ✅ **Offline Stable** - Runs on localhost, no internet required once installed
+- ✅ **Modern Dashboard** - Clean UI with real-time scanning
+- ✅ **Live API Integration** - Torn API and FF Scouter when online
+- ✅ **Target Analysis** - Tier classification and war reports
+- ✅ **Data Persistence** - Results saved in browser storage
+
+## 📋 Requirements
+
+- Node.js (v14 or higher)
+- Web browser (Chrome, Firefox, Safari, Edge)
+
+## 🎯 Features
 
 ✅ **Live API Integration** - Real-time data from Torn API and FF Scouter  
 ✅ **Target Scanning** - Automated faction member analysis  
