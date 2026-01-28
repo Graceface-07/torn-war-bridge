@@ -299,9 +299,27 @@ function displayMembers(scouterData) {
     html += `
             </tbody>
         </table>
+        <br>
+        <button id="warAnalysisBtn" onclick="goToWarAnalysis()" style="margin-top: 20px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">
+            📊 Open War Analysis Tool
+        </button>
     `;
     
     document.getElementById('membersData').innerHTML = html;
+    
+    // Store data in localStorage for war-analysis.html to access
+    localStorage.setItem('playerData', JSON.stringify({
+        id: USER_ID,
+        stats: myStats,
+        battleStats: myBattleStats
+    }));
+    
+    localStorage.setItem('factionData', JSON.stringify(membersWithFF));
+}
+
+// Navigate to war analysis tool
+function goToWarAnalysis() {
+    window.location.href = 'war-analysis.html';
 }
 
 // Get FF color category
