@@ -3,35 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>War Analysis</title>
-    <script src="war-analysis.js" defer></script>
+    <title>War Analysis - Torn War Bridge</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 2rem;
+        }
+
+        .header-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .back-link {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            background: var(--bg-card);
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .analysis-card {
+            background: var(--bg-card);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .verdict-box {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+            border-left: 4px solid var(--primary);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .verdict-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-box {
+            background: var(--bg-dark);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .recommendations {
+            background: var(--bg-dark);
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+        }
+
+        .recommendation-item {
+            padding: 1rem;
+            background: rgba(99, 102, 241, 0.05);
+            border-left: 3px solid var(--info);
+            margin-bottom: 1rem;
+            border-radius: 0.25rem;
+        }
+
+        .target-list {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .target-item {
+            background: var(--bg-dark);
+            padding: 1rem 1.25rem;
+            border-radius: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid;
+        }
+
+        .target-item.secure { border-color: var(--success); }
+        .target-item.prime { border-color: var(--info); }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+    </style>
 </head>
 <body>
-    <h1>Ranked War Analysis</h1>
-    <div id="analysis"></div>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">⚔️ Torn War Bridge</div>
+            <a href="/" class="back-link">← Back to Dashboard</a>
+        </div>
+    </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const analysisElement = document.getElementById('analysis');
+    <div class="container">
+        <div class="analysis-card">
+            <h1 class="card-title">⚡ Ranked War Analysis</h1>
+            <div id="analysis-content"></div>
+        </div>
+    </div>
 
-            // Fetch analysis data from localStorage
-            const analysisData = JSON.parse(localStorage.getItem('warAnalysis')) || {};
-
-            // Display the ranked war analysis
-            const displayAnalysis = () => {
-                // Assumes analysis data structure has been predefined
-                if (analysisData) {
-                    analysisElement.innerHTML = `<h2>${analysisData.verdict}</h2>` +
-                        `<p>Recommendations: ${analysisData.recommendations.join(', ')}</p>` +
-                        `<p>Tier Breakdown: ${JSON.stringify(analysisData.tierBreakdown)}</p>` +
-                        `<p>Beatable Targets: ${analysisData.beatableTargets.join(', ')}</p>`;
-                } else {
-                    analysisElement.innerHTML = '<p>No analysis available.</p>';
-                }
-            };
-
-            displayAnalysis();
-        });
-    </script>
+    <script src="war-analysis.js"></script>
 </body>
 </html>
