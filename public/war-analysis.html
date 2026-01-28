@@ -3,62 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>War Analysis Report</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>War Analysis</title>
+    <script src="war-analysis.js" defer></script>
 </head>
 <body>
-    <header>
-        <h1>War Analysis Report</h1>
-        <p>Date: 2026-01-28</p>
-    </header>
-    <main>
-        <section id="verdict">
-            <h2>Verdict</h2>
-            <p>...</p>  <!-- Add specific verdict content here -->
-        </section>
-        <section id="recommendations">
-            <h2>Recommendations</h2>
-            <ul>
-                <li>...</li> <!-- List recommendations here -->
-            </ul>
-        </section>
-        <section id="stats-grid">
-            <h2>Statistics Grid</h2>
-            <table>
-                <tr>
-                    <th>Stat Name</th>
-                    <th>Value</th>
-                </tr>
-                <tr>
-                    <td>Example Stat</td>
-                    <td>Value</td>
-                </tr>
-                <!-- Add more stats here -->
-            </table>
-        </section>
-        <section id="tier-breakdown">
-            <h2>Tier Breakdown</h2>
-            <div class="tier">
-                <h3>Tier 1</h3>
-                <p>Details about Tier 1.</p>
-            </div>
-            <!-- Add more tiers as needed -->
-        </section>
-        <section id="simulated-lineup">
-            <h2>Simulated 20-Hit Lineup</h2>
-            <ul>
-                <li>...</li> <!-- List simulated hits here -->
-            </ul>
-        </section>
-        <section id="beatable-targets">
-            <h2>Beatable Targets</h2>
-            <ul>
-                <li>...</li> <!-- List beatable targets here -->
-            </ul>
-        </section>
-    </main>
-    <footer>
-        <p>&copy; 2026 War Analysis Company</p>
-    </footer>
+    <h1>Ranked War Analysis</h1>
+    <div id="analysis"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const analysisElement = document.getElementById('analysis');
+
+            // Fetch analysis data from localStorage
+            const analysisData = JSON.parse(localStorage.getItem('warAnalysis')) || {};
+
+            // Display the ranked war analysis
+            const displayAnalysis = () => {
+                // Assumes analysis data structure has been predefined
+                if (analysisData) {
+                    analysisElement.innerHTML = `<h2>${analysisData.verdict}</h2>` +
+                        `<p>Recommendations: ${analysisData.recommendations.join(', ')}</p>` +
+                        `<p>Tier Breakdown: ${JSON.stringify(analysisData.tierBreakdown)}</p>` +
+                        `<p>Beatable Targets: ${analysisData.beatableTargets.join(', ')}</p>`;
+                } else {
+                    analysisElement.innerHTML = '<p>No analysis available.</p>';
+                }
+            };
+
+            displayAnalysis();
+        });
+    </script>
 </body>
 </html>
