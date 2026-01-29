@@ -112,9 +112,11 @@ app.get('/api/faction/:factionId/members', async (req, res) => {
             });
         }
         
-        // Use Torn API v2 for faction members
-        const url = `https://api.torn.com/v2/faction/${factionId}?key=${TORN_API_KEY}`;
+        // Use Torn API with selections parameter (NOT v2)
+        const url = `https://api.torn.com/faction/${factionId}?selections=basic&key=${TORN_API_KEY}`;
         const response = await axios.get(url, { timeout: 10000 });
+        
+        console.log('Faction API Response:', JSON.stringify(response.data).substring(0, 200));
         
         res.json({
             name: response.data.name || 'UNKNOWN',
@@ -150,21 +152,24 @@ app.get('/api/user/:userId', async (req, res) => {
             });
         }
         
-        // Use Torn API v2 to get user data with battle stats
-        const url = `https://api.torn.com/v2/user/${userId}?key=${TORN_API_KEY}`;
+        // Use Torn API with selections parameter (NOT v2)
+        const url = `https://api.torn.com/user/${userId}?selections=profile,battlestats&key=${TORN_API_KEY}`;
         const response = await axios.get(url, { timeout: 10000 });
+        
+        console.log('User API Response keys:', Object.keys(response.data));
         
         // Return the user data with battle stats
         res.json({
             name: response.data.name || 'Unknown',
-            player_id: response.data.player_id,
-            level: response.data.level,
-            status: response.data.status,
+            player_id: response.data.player_id || userId,
+            level: response.data.level || 0,
+            status: response.data.status || {},
             strength: response.data.strength || 0,
             defense: response.data.defense || 0,
             speed: response.data.speed || 0,
             dexterity: response.data.dexterity || 0,
-            battle_stats: response.data.battle_stats || {}
+            total: response.data.total || 0,
+            battle_stats: response.data
         });
     } catch (error) {
         console.error('Error fetching user data:', error.message);
