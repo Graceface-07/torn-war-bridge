@@ -388,7 +388,7 @@ function openModal(member) {
     </div>
     <div class="modal-row">
       <span class="modal-label">Tier</span>
-      <span class="modal-value" style="color:\${tierColors[member.tier]; text-transform: uppercase;">\${member.tier}</span>
+      <span class="modal-value" style="color:\${tierColors[member.tier]}; text-transform: uppercase;">\${member.tier}</span>
     </div>
     <div class="modal-actions">
       <button class="modal-btn" onclick="copyToClipboard('\${member.id}')">Copy ID</button>
