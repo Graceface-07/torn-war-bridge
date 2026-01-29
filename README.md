@@ -50,6 +50,16 @@ This runs the server with nodemon for automatic restart on file changes.
 
 ## Usage
 
+### Quick Start with Demo Mode
+
+**New to the Command Hub? Try Demo Mode first!**
+
+1. Open your browser to `http://localhost:3000`
+2. Click the **"🎮 Try Demo Mode"** button
+3. Explore all features with realistic sample data - no API key required!
+
+### Using with Real Torn Data
+
 1. **Set Your API Key**
    - Enter your Torn API key in the input field at the top
    - Click "Save API Key" to persist it
@@ -72,6 +82,16 @@ This runs the server with nodemon for automatic restart on file changes.
    - View online/offline counts and activity rates
    - Click "View Member List" for detailed member information
 
+### Demo Mode Features
+
+Demo mode includes realistic data for testing:
+- **Player**: CommanderDelta (Level 42, 438M total stats)
+- **Faction**: Elite Warriors [ELTW] (12 members, 1.25M respect)
+- **War Analysis**: 100% readiness, strategic recommendations
+- **Member List**: 12 faction members with varying levels and statuses
+
+Perfect for demonstrations, testing, and exploring the application before connecting your real Torn account!
+
 ## Project Structure
 
 ```
@@ -80,13 +100,15 @@ torn-war-bridge/
 │   ├── index.html           # Main Command Hub dashboard
 │   ├── command-hub.js       # Main controller for UI interactions
 │   ├── api-service.js       # Centralized Torn API service
+│   ├── demo-data.js         # Demo mode mock data generator
 │   ├── styles.css           # Professional styling
 │   ├── war-analysis.html    # Standalone war analysis page
 │   ├── war-analysis.js      # War analysis calculations
 │   └── dashboard.js         # Legacy dashboard (backward compatible)
 ├── server.js                # Express server
 ├── package.json             # Dependencies and scripts
-└── README.md               # This file
+├── README.md                # This file
+└── DEPLOYMENT_GUIDE.md      # Deployment and troubleshooting guide
 ```
 
 ## API Service
