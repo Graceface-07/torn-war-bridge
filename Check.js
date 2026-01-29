@@ -9,11 +9,6 @@ function getApiKey(keyName, fallbackValue = '') {
     const value = props.getProperty(keyName);
     if (value) return value;
     
-    // Fallback to commented constants if they exist
-    if (keyName === 'TORN_API_KEY' && typeof TORN_API_KEY !== 'undefined') return TORN_API_KEY;
-    if (keyName === 'SC_KEY' && typeof SC_KEY !== 'undefined') return SC_KEY;
-    if (keyName === 'WORKER_URL' && typeof WORKER_URL !== 'undefined') return WORKER_URL;
-    
     return fallbackValue;
   } catch (e) {
     return fallbackValue;
@@ -66,7 +61,7 @@ function getScouterData(tid, uid) {
     if (scKey === 'DEMO_KEY') {
       return [{
         bs_estimate: Math.floor(Math.random() * 100000000) + 10000000,
-        fair_fight: (Math.random() * 2 + 0.5).toFixed(2),
+        fair_fight: parseFloat((Math.random() * 2 + 0.5).toFixed(2)),
         demoMode: true
       }];
     }
@@ -78,7 +73,7 @@ function getScouterData(tid, uid) {
     if (!data || data.error) {
       return [{
         bs_estimate: Math.floor(Math.random() * 100000000) + 10000000,
-        fair_fight: (Math.random() * 2 + 0.5).toFixed(2),
+        fair_fight: parseFloat((Math.random() * 2 + 0.5).toFixed(2)),
         demoMode: true
       }];
     }
@@ -87,7 +82,7 @@ function getScouterData(tid, uid) {
   } catch (e) {
     return [{
       bs_estimate: Math.floor(Math.random() * 100000000) + 10000000,
-      fair_fight: (Math.random() * 2 + 0.5).toFixed(2),
+      fair_fight: parseFloat((Math.random() * 2 + 0.5).toFixed(2)),
       demoMode: true
     }];
   }
@@ -260,11 +255,12 @@ function getHTML() {
 </div>
 
 <script>
-let SESSION = { data: [], myStats: 0, uid: null, demoMode: false };
+let SESSION = { data: [], myStats: 0, uid: null, demoMode: false, isScanning: false };
 const WORKER_URL = '${workerUrl}';
 
 function showError(message) {
   const banner = document.getElementById('error-banner');
+  banner.style.background = '#ff4444';
   banner.textContent = message;
   banner.style.display = 'block';
   setTimeout(() => { banner.style.display = 'none'; }, 5000);
@@ -280,6 +276,12 @@ function runTacticalScan() {
   const fid = document.getElementById('fid').value;
   if(!uid || !fid) return alert("Credentials missing.");
   
+  if (SESSION.isScanning) {
+    showError('Scan already in progress. Please wait.');
+    return;
+  }
+  
+  SESSION.isScanning = true;
   SESSION.uid = uid;
   SESSION.data = [];
   document.getElementById('grid').innerHTML = "";
@@ -317,24 +319,32 @@ function runTacticalScan() {
                 let pct = Math.round((count/members.length)*100);
                 document.getElementById('p-fill').style.width = pct + "%";
                 document.getElementById('p-percent').textContent = pct + "%";
-                if(count === members.length) setTimeout(()=>document.getElementById('progress-container').style.display="none", 1000);
+                if(count === members.length) {
+                  setTimeout(() => {
+                    document.getElementById('progress-container').style.display = "none";
+                    SESSION.isScanning = false;
+                  }, 1000);
+                }
               })
               .withFailureHandler(err => {
-                showError('Failed to fetch scouter data: ' + err);
+                showError('Failed to fetch scouter data: ' + (err.message || String(err)));
                 count++;
+                if(count === members.length) SESSION.isScanning = false;
               })
               .getScouterData(id, uid);
           });
         })
         .withFailureHandler(err => {
-          showError('Failed to fetch faction data: ' + err);
+          showError('Failed to fetch faction data: ' + (err.message || String(err)));
           document.getElementById('progress-container').style.display = 'none';
+          SESSION.isScanning = false;
         })
         .getFactionData(fid);
     })
     .withFailureHandler(err => {
-      showError('Failed to fetch user data: ' + err);
+      showError('Failed to fetch user data: ' + (err.message || String(err)));
       document.getElementById('progress-container').style.display = 'none';
+      SESSION.isScanning = false;
     })
     .getUserName(uid);
 }
@@ -364,7 +374,8 @@ function renderCard(o) {
 }
 
 function openModal(member) {
-  document.getElementById('modal-title').textContent = member.name;
+  const modalTitle = document.getElementById('modal-title');
+  modalTitle.textContent = member.name;
   
   const tierColors = {
     secure: 'var(--secure)',
@@ -373,30 +384,59 @@ function openModal(member) {
     suicide: 'var(--suicide)'
   };
   
-  document.getElementById('modal-body').innerHTML = \`
-    <div class="modal-row">
-      <span class="modal-label">Player ID</span>
-      <span class="modal-value">\${member.id}</span>
-    </div>
-    <div class="modal-row">
-      <span class="modal-label">Battle Stats</span>
-      <span class="modal-value">\${formatNum(member.stats)}</span>
-    </div>
-    <div class="modal-row">
-      <span class="modal-label">Fair Fight</span>
-      <span class="modal-value" style="color:\${tierColors[member.tier]}">\${member.ff.toFixed(2)}x</span>
-    </div>
-    <div class="modal-row">
-      <span class="modal-label">Tier</span>
-      <span class="modal-value" style="color:\${tierColors[member.tier]}; text-transform: uppercase;">\${member.tier}</span>
-    </div>
-    <div class="modal-actions">
-      <button class="modal-btn" onclick="copyToClipboard('\${member.id}')">Copy ID</button>
-      <button class="modal-btn" onclick="window.open('https://www.torn.com/profiles.php?XID=\${member.id}', '_blank')">Open Profile</button>
-    </div>
-  \`;
+  const modalBody = document.getElementById('modal-body');
+  modalBody.innerHTML = '';
+  
+  // Create and append elements safely
+  const idRow = createModalRow('Player ID', member.id);
+  const statsRow = createModalRow('Battle Stats', formatNum(member.stats));
+  const ffRow = createModalRow('Fair Fight', member.ff.toFixed(2) + 'x', tierColors[member.tier]);
+  const tierRow = createModalRow('Tier', member.tier.toUpperCase(), tierColors[member.tier]);
+  
+  modalBody.appendChild(idRow);
+  modalBody.appendChild(statsRow);
+  modalBody.appendChild(ffRow);
+  modalBody.appendChild(tierRow);
+  
+  // Create action buttons
+  const actionsDiv = document.createElement('div');
+  actionsDiv.className = 'modal-actions';
+  
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'modal-btn';
+  copyBtn.textContent = 'Copy ID';
+  copyBtn.onclick = () => copyToClipboard(member.id);
+  
+  const profileBtn = document.createElement('button');
+  profileBtn.className = 'modal-btn';
+  profileBtn.textContent = 'Open Profile';
+  profileBtn.onclick = () => window.open('https://www.torn.com/profiles.php?XID=' + encodeURIComponent(member.id), '_blank');
+  
+  actionsDiv.appendChild(copyBtn);
+  actionsDiv.appendChild(profileBtn);
+  modalBody.appendChild(actionsDiv);
   
   document.getElementById('modal').style.display = 'flex';
+}
+
+function createModalRow(label, value, color) {
+  const row = document.createElement('div');
+  row.className = 'modal-row';
+  
+  const labelSpan = document.createElement('span');
+  labelSpan.className = 'modal-label';
+  labelSpan.textContent = label;
+  
+  const valueSpan = document.createElement('span');
+  valueSpan.className = 'modal-value';
+  valueSpan.textContent = value;
+  if (color) {
+    valueSpan.style.color = color;
+  }
+  
+  row.appendChild(labelSpan);
+  row.appendChild(valueSpan);
+  return row;
 }
 
 function closeModal() {
@@ -410,13 +450,43 @@ function closeModalIfOutside(event) {
 }
 
 function copyToClipboard(text) {
+  // Try modern Clipboard API first
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showInfo('ID copied to clipboard: ' + text);
+    }).catch(() => {
+      // Fallback to deprecated execCommand
+      fallbackCopyToClipboard(text);
+    });
+  } else {
+    // Fallback for older browsers
+    fallbackCopyToClipboard(text);
+  }
+}
+
+function fallbackCopyToClipboard(text) {
   const input = document.createElement('input');
   input.value = text;
   document.body.appendChild(input);
   input.select();
-  document.execCommand('copy');
+  try {
+    document.execCommand('copy');
+    showInfo('ID copied to clipboard: ' + text);
+  } catch (e) {
+    showError('Failed to copy ID to clipboard');
+  }
   document.body.removeChild(input);
-  showError('ID copied to clipboard: ' + text);
+}
+
+function showInfo(message) {
+  const banner = document.getElementById('error-banner');
+  banner.style.background = '#00e5ff';
+  banner.textContent = message;
+  banner.style.display = 'block';
+  setTimeout(() => { 
+    banner.style.display = 'none'; 
+    banner.style.background = '#ff4444';
+  }, 3000);
 }
 
 async function pushToKV() {
@@ -441,7 +511,7 @@ async function pushToKV() {
     } catch(e) { 
       btn.textContent = "HTTPS ERROR";
       btn.disabled = false;
-      showError('Failed to push data to Worker: ' + e);
+      showError('Failed to push data to Worker: ' + (e.message || String(e)));
       return;
     }
   }
