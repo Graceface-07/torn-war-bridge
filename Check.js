@@ -1,6 +1,24 @@
-// const TORN_API_KEY = 'CZP2D2ZnbXWsYiDT
+// const TORN_API_KEY = 'CZP2D2ZnbXWsYiDT';
 // const SC_KEY = 'rwLgZTyqgWDxhoCx';
 // const WORKER_URL = 'https://torn-war-bridge.tmecf.workers.dev/';
+
+// Helper function to get API keys from Script Properties with fallback
+function getApiKey(keyName, fallbackValue = '') {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const value = props.getProperty(keyName);
+    if (value) return value;
+    
+    // Fallback to commented constants if they exist
+    if (keyName === 'TORN_API_KEY' && typeof TORN_API_KEY !== 'undefined') return TORN_API_KEY;
+    if (keyName === 'SC_KEY' && typeof SC_KEY !== 'undefined') return SC_KEY;
+    if (keyName === 'WORKER_URL' && typeof WORKER_URL !== 'undefined') return WORKER_URL;
+    
+    return fallbackValue;
+  } catch (e) {
+    return fallbackValue;
+  }
+}
 
 function doGet() {
   return HtmlService.createHtmlOutput(getHTML())
@@ -9,35 +27,140 @@ function doGet() {
 }
 
 // SERVER SIDE FETCHERS
+// Get user name and total stats from Torn API
+function getUserName(uid) {
+  try {
+    const tornKey = getApiKey('TORN_API_KEY', 'DEMO_KEY');
+    if (tornKey === 'DEMO_KEY') {
+      return { name: 'Demo User', total: 50000000, demoMode: true };
+    }
+    
+    const url = `https://api.torn.com/user/${uid}?selections=basic,personalstats&key=${tornKey}`;
+    const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const data = JSON.parse(response.getContentText());
+    
+    if (data.error) {
+      return { name: 'Error: ' + data.error.error, total: 0, demoMode: true };
+    }
+    
+    const total = (data.personalstats?.strength || 0) + 
+                  (data.personalstats?.speed || 0) + 
+                  (data.personalstats?.dexterity || 0) + 
+                  (data.personalstats?.defense || 0);
+    
+    return { name: data.name || 'Unknown', total: total };
+  } catch (e) {
+    return { name: 'Demo User', total: 50000000, demoMode: true };
+  }
+}
+
+// Get faction data wrapper
+function getFactionData(fid) {
+  const result = fetchFactionMembersV2(fid);
+  return result;
+}
+
 function getScouterData(tid, uid) {
-  const url = "https://ffscouter.com/api/v1/get-stats?key=" + SC_KEY + "&targets=" + tid + "&user_id=" + uid;
-  const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-  return JSON.parse(res.getContentText());
+  try {
+    const scKey = getApiKey('SC_KEY', 'DEMO_KEY');
+    if (scKey === 'DEMO_KEY') {
+      return [{
+        bs_estimate: Math.floor(Math.random() * 100000000) + 10000000,
+        fair_fight: (Math.random() * 2 + 0.5).toFixed(2),
+        demoMode: true
+      }];
+    }
+    
+    const url = "https://ffscouter.com/api/v1/get-stats?key=" + scKey + "&targets=" + tid + "&user_id=" + uid;
+    const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const data = JSON.parse(res.getContentText());
+    
+    if (!data || data.error) {
+      return [{
+        bs_estimate: Math.floor(Math.random() * 100000000) + 10000000,
+        fair_fight: (Math.random() * 2 + 0.5).toFixed(2),
+        demoMode: true
+      }];
+    }
+    
+    return data;
+  } catch (e) {
+    return [{
+      bs_estimate: Math.floor(Math.random() * 100000000) + 10000000,
+      fair_fight: (Math.random() * 2 + 0.5).toFixed(2),
+      demoMode: true
+    }];
+  }
 }
 
 function fetchFactionMembersV2(fid) {
   try {
-    const url = `https://api.torn.com/v2/faction/${fid}/members?key=${TORN_API_KEY}`;
-    const res = JSON.parse(UrlFetchApp.fetch(url).getContentText());
+    const tornKey = getApiKey('TORN_API_KEY', 'DEMO_KEY');
+    if (tornKey === 'DEMO_KEY') {
+      return {
+        name: 'Demo Faction',
+        members: {
+          '12345': { name: 'Alice' },
+          '67890': { name: 'Bob' },
+          '11111': { name: 'Charlie' }
+        },
+        demoMode: true
+      };
+    }
+    
+    const url = `https://api.torn.com/v2/faction/${fid}/members?key=${tornKey}`;
+    const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const data = JSON.parse(res.getContentText());
+    
+    if (data.error) {
+      return {
+        name: 'Demo Faction',
+        members: {
+          '12345': { name: 'Alice' },
+          '67890': { name: 'Bob' },
+          '11111': { name: 'Charlie' }
+        },
+        demoMode: true
+      };
+    }
+    
     return {
-      name: res.name || 'UNKNOWN',
-      members: res.members || {}
+      name: data.name || 'UNKNOWN',
+      members: data.members || {}
     };
   } catch (e) {
-    return { name: 'UNKNOWN', members: {} };
+    return {
+      name: 'Demo Faction',
+      members: {
+        '12345': { name: 'Alice' },
+        '67890': { name: 'Bob' },
+        '11111': { name: 'Charlie' }
+      },
+      demoMode: true
+    };
   }
 }
+
 function fetchUserTorn(uid) {
   try {
-    const url = `https://api.torn.com/user/${uid}?selections=basic,profile&key=${SC_KEY}`; 
-    return JSON.parse(UrlFetchApp.fetch(url).getContentText());
+    const tornKey = getApiKey('TORN_API_KEY', 'DEMO_KEY');
+    if (tornKey === 'DEMO_KEY') {
+      return { name: 'Demo User', player_id: uid };
+    }
+    
+    const url = `https://api.torn.com/user/${uid}?selections=basic,profile&key=${tornKey}`;
+    const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    return JSON.parse(response.getContentText());
   } catch (e) {
-    return {};
+    return { name: 'Demo User', player_id: uid };
   }
 }
 
 
 function getHTML() {
+  const workerUrl = getApiKey('WORKER_URL', '');
+  const hasWorkerUrl = workerUrl !== '';
+  
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -52,21 +175,43 @@ function getHTML() {
   
   input { width: 100%; padding: 10px; background: #1a1a1d; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box; }
   button { width: 100%; padding: 12px; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; cursor: pointer; text-align: left; font-weight: bold; transition: 0.2s; }
-  button:hover { background: #333; border-color: var(--prime); }
+  button:hover:not(:disabled) { background: #333; border-color: var(--prime); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
   .btn-push { color: var(--prime); border: 1px dashed var(--prime); margin-top: auto; text-align: center; }
   
   /* Main Content */
   .main { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
   .faction-header { font-size: 24px; font-weight: bold; color: var(--prime); border-bottom: 1px solid #333; padding-bottom: 10px; }
   
+  /* Demo Mode Banner */
+  .demo-banner { background: linear-gradient(90deg, #ff4444, #ffaa00); color: #fff; padding: 12px 20px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; display: none; }
+  
+  /* Error Banner */
+  .error-banner { background: #ff4444; color: #fff; padding: 12px 20px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; display: none; }
+  
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
-  .card { background: var(--card); border-radius: 10px; padding: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #222; transition: 0.3s; }
-  .card:hover { transform: translateY(-2px); border-color: #444; }
+  .card { background: var(--card); border-radius: 10px; padding: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #222; transition: 0.3s; cursor: pointer; }
+  .card:hover { transform: translateY(-2px); border-color: #444; box-shadow: 0 4px 12px rgba(0,229,255,0.2); }
   
   /* Visual Trace Bar */
   #progress-container { background: #111; padding: 15px; border-radius: 10px; border: 1px solid #222; }
   .bar-bg { background: #000; height: 4px; width: 100%; border-radius: 2px; margin-top: 8px; }
   .bar-fill { height: 100%; width: 0%; background: var(--prime); box-shadow: 0 0 10px var(--prime); transition: 0.3s; }
+  
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-content { background: var(--card); border: 1px solid #444; border-radius: 12px; padding: 25px; max-width: 500px; width: 90%; box-shadow: 0 8px 32px rgba(0,229,255,0.3); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #333; }
+  .modal-title { font-size: 20px; font-weight: bold; color: var(--prime); }
+  .modal-close { background: none; border: none; color: #999; font-size: 24px; cursor: pointer; padding: 0; width: auto; }
+  .modal-close:hover { color: #fff; }
+  .modal-body { display: flex; flex-direction: column; gap: 15px; }
+  .modal-row { display: flex; justify-content: space-between; padding: 10px; background: #0a0a0b; border-radius: 6px; }
+  .modal-label { color: #999; font-size: 12px; text-transform: uppercase; }
+  .modal-value { color: #fff; font-weight: bold; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 10px; }
+  .modal-btn { flex: 1; padding: 10px; background: #222; border: 1px solid #444; color: var(--prime); border-radius: 6px; cursor: pointer; font-weight: bold; text-align: center; transition: 0.2s; }
+  .modal-btn:hover { background: #333; border-color: var(--prime); }
 </style>
 </head>
 <body>
@@ -84,10 +229,12 @@ function getHTML() {
   
   <button onclick="runTacticalScan()">Execute Scan</button>
   <button onclick="showReport()">Generate Report</button>
-  <button id="push-btn" class="btn-push" onclick="pushToKV()">Daily KV Push</button>
+  <button id="push-btn" class="btn-push" onclick="pushToKV()" ${!hasWorkerUrl ? 'disabled title="Worker URL not configured in Script Properties"' : ''}>Daily KV Push</button>
 </div>
 
 <div class="main">
+  <div id="demo-banner" class="demo-banner">⚠️ DEMO MODE: Using sample data. Configure Script Properties for live data.</div>
+  <div id="error-banner" class="error-banner"></div>
   <div id="fac-name" class="faction-header">SYSTEM READY</div>
   
   <div id="progress-container" style="display:none;">
@@ -101,8 +248,32 @@ function getHTML() {
   <div id="grid" class="grid"></div>
 </div>
 
+<!-- Modal -->
+<div id="modal" class="modal-overlay" onclick="closeModalIfOutside(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Member Details</div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
 <script>
-let SESSION = { data: [], myStats: 0, uid: null };
+let SESSION = { data: [], myStats: 0, uid: null, demoMode: false };
+const WORKER_URL = '${workerUrl}';
+
+function showError(message) {
+  const banner = document.getElementById('error-banner');
+  banner.textContent = message;
+  banner.style.display = 'block';
+  setTimeout(() => { banner.style.display = 'none'; }, 5000);
+}
+
+function showDemoMode() {
+  SESSION.demoMode = true;
+  document.getElementById('demo-banner').style.display = 'block';
+}
 
 function runTacticalScan() {
   const uid = document.getElementById('uid').value;
@@ -110,39 +281,62 @@ function runTacticalScan() {
   if(!uid || !fid) return alert("Credentials missing.");
   
   SESSION.uid = uid;
+  SESSION.data = [];
   document.getElementById('grid').innerHTML = "";
   document.getElementById('progress-container').style.display = "block";
+  document.getElementById('demo-banner').style.display = "none";
   
-  google.script.run.withSuccessHandler(user => {
-    document.getElementById('op-name').textContent = user.name;
-    document.getElementById('op-stats').textContent = formatNum(user.total);
-    SESSION.myStats = user.total;
+  google.script.run
+    .withSuccessHandler(user => {
+      if (user.demoMode) showDemoMode();
+      document.getElementById('op-name').textContent = user.name;
+      document.getElementById('op-stats').textContent = formatNum(user.total);
+      SESSION.myStats = user.total;
 
-    google.script.run.withSuccessHandler(fac => {
-      document.getElementById('fac-name').textContent = fac.name.toUpperCase();
-      const members = Object.keys(fac.members);
-      let count = 0;
+      google.script.run
+        .withSuccessHandler(fac => {
+          if (fac.demoMode) showDemoMode();
+          document.getElementById('fac-name').textContent = fac.name.toUpperCase();
+          const members = Object.keys(fac.members);
+          let count = 0;
 
-      members.forEach(id => {
-        google.script.run.withSuccessHandler(scouter => {
-          const s = Array.isArray(scouter) ? scouter[0] : scouter;
-          const stats = Number(s.bs_estimate) || 0;
-          const ff = Number(s.fair_fight) || 1.0;
-          const tier = getTier(stats);
-          
-          const obj = { id, name: fac.members[id].name, stats, ff, tier };
-          SESSION.data.push(obj);
-          renderCard(obj);
+          members.forEach(id => {
+            google.script.run
+              .withSuccessHandler(scouter => {
+                if (scouter && scouter[0] && scouter[0].demoMode) showDemoMode();
+                const s = Array.isArray(scouter) ? scouter[0] : scouter;
+                const stats = Number(s.bs_estimate) || 0;
+                const ff = Number(s.fair_fight) || 1.0;
+                const tier = getTier(stats);
+                
+                const obj = { id, name: fac.members[id].name, stats, ff, tier };
+                SESSION.data.push(obj);
+                renderCard(obj);
 
-          count++;
-          let pct = Math.round((count/members.length)*100);
-          document.getElementById('p-fill').style.width = pct + "%";
-          document.getElementById('p-percent').textContent = pct + "%";
-          if(count === members.length) setTimeout(()=>document.getElementById('progress-container').style.display="none", 1000);
-        }).getScouterData(id, uid);
-      });
-    }).getFactionData(fid);
-  }).getUserName(uid);
+                count++;
+                let pct = Math.round((count/members.length)*100);
+                document.getElementById('p-fill').style.width = pct + "%";
+                document.getElementById('p-percent').textContent = pct + "%";
+                if(count === members.length) setTimeout(()=>document.getElementById('progress-container').style.display="none", 1000);
+              })
+              .withFailureHandler(err => {
+                showError('Failed to fetch scouter data: ' + err);
+                count++;
+              })
+              .getScouterData(id, uid);
+          });
+        })
+        .withFailureHandler(err => {
+          showError('Failed to fetch faction data: ' + err);
+          document.getElementById('progress-container').style.display = 'none';
+        })
+        .getFactionData(fid);
+    })
+    .withFailureHandler(err => {
+      showError('Failed to fetch user data: ' + err);
+      document.getElementById('progress-container').style.display = 'none';
+    })
+    .getUserName(uid);
 }
 
 function getTier(bs) {
@@ -156,6 +350,7 @@ function renderCard(o) {
   const card = document.createElement('div');
   card.className = 'card';
   card.style.borderLeft = "4px solid var(--"+o.tier+")";
+  card.onclick = () => openModal(o);
   card.innerHTML = \`
     <div>
       <div style="font-weight:bold;">\${o.name}</div>
@@ -168,9 +363,72 @@ function renderCard(o) {
   document.getElementById('grid').appendChild(card);
 }
 
+function openModal(member) {
+  document.getElementById('modal-title').textContent = member.name;
+  
+  const tierColors = {
+    secure: 'var(--secure)',
+    prime: 'var(--prime)',
+    risky: 'var(--risky)',
+    suicide: 'var(--suicide)'
+  };
+  
+  document.getElementById('modal-body').innerHTML = \`
+    <div class="modal-row">
+      <span class="modal-label">Player ID</span>
+      <span class="modal-value">\${member.id}</span>
+    </div>
+    <div class="modal-row">
+      <span class="modal-label">Battle Stats</span>
+      <span class="modal-value">\${formatNum(member.stats)}</span>
+    </div>
+    <div class="modal-row">
+      <span class="modal-label">Fair Fight</span>
+      <span class="modal-value" style="color:\${tierColors[member.tier]}">\${member.ff.toFixed(2)}x</span>
+    </div>
+    <div class="modal-row">
+      <span class="modal-label">Tier</span>
+      <span class="modal-value" style="color:\${tierColors[member.tier]; text-transform: uppercase;">\${member.tier}</span>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="copyToClipboard('\${member.id}')">Copy ID</button>
+      <button class="modal-btn" onclick="window.open('https://www.torn.com/profiles.php?XID=\${member.id}', '_blank')">Open Profile</button>
+    </div>
+  \`;
+  
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+}
+
+function closeModalIfOutside(event) {
+  if (event.target.id === 'modal') {
+    closeModal();
+  }
+}
+
+function copyToClipboard(text) {
+  const input = document.createElement('input');
+  input.value = text;
+  document.body.appendChild(input);
+  input.select();
+  document.execCommand('copy');
+  document.body.removeChild(input);
+  showError('ID copied to clipboard: ' + text);
+}
+
 async function pushToKV() {
+  if (!WORKER_URL) {
+    showError('Worker URL not configured. Set WORKER_URL in Script Properties.');
+    return;
+  }
+  
   const btn = document.getElementById('push-btn');
   btn.textContent = "UPLOADING...";
+  btn.disabled = true;
+  
   for (let item of SESSION.data) {
     try {
       const res = await fetch(WORKER_URL, {
@@ -180,9 +438,18 @@ async function pushToKV() {
       });
       const ack = await res.json();
       if(!ack.ok) throw "Fail";
-    } catch(e) { btn.textContent = "HTTPS ERROR"; return; }
+    } catch(e) { 
+      btn.textContent = "HTTPS ERROR";
+      btn.disabled = false;
+      showError('Failed to push data to Worker: ' + e);
+      return;
+    }
   }
   btn.textContent = "SYNC COMPLETE";
+  setTimeout(() => {
+    btn.textContent = "Daily KV Push";
+    btn.disabled = false;
+  }, 2000);
 }
 
 function formatNum(n) {
