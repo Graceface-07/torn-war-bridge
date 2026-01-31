@@ -1,0 +1,11 @@
+name: CI
+on:
+  push:
+    branches:
+      - copilot/streamline-torn-api-integration
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "OK"
