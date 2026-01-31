@@ -2,112 +2,72 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>Command Hub | Torn Tactical</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torn Command Hub</title>
     <link rel="stylesheet" href="styles.css">
+    <script defer src="api-service.js"></script>
+    <script defer src="command-hub.js"></script>
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <h1>🎯 Torn Command Hub</h1>
-            <p class="subtitle">Automated Tactical Dashboard for Torn Warfare</p>
+        <div class="header">
+            <h1>Command Hub</h1>
+            <div class="subtitle">Torn Tactical HUD</div>
             <div class="api-config">
-                <input type="text" id="apiKey" placeholder="Enter your Torn API key" />
-                <button id="saveApiKey" class="btn btn-primary">Save API Key</button>
-                <button id="demoMode" class="btn btn-demo">🎮 Try Demo Mode</button>
+                <input id="userId" type="number" placeholder="Operator (User ID)">
+                <input id="factionId" type="number" placeholder="Faction ID">
+                <button id="saveIds" class="btn btn-primary">Save IDs</button>
                 <span id="apiStatus" class="status"></span>
             </div>
-        </header>
-
-        <main class="main-content">
-            <!-- Quick Actions Panel -->
-            <section class="quick-actions">
-                <h2>Quick Actions</h2>
-                <div class="action-buttons">
-                    <button class="btn btn-action" data-action="player">
-                        <span class="icon">👤</span>
-                        <span>Player Stats</span>
-                    </button>
-                    <button class="btn btn-action" data-action="faction">
-                        <span class="icon">👥</span>
-                        <span>Faction Insights</span>
-                    </button>
-                    <button class="btn btn-action" data-action="war">
-                        <span class="icon">⚔️</span>
-                        <span>War Analysis</span>
-                    </button>
-                    <button class="btn btn-action" data-action="members">
-                        <span class="icon">📊</span>
-                        <span>Member Stats</span>
-                    </button>
+        </div>
+        <div class="main-dashboard">
+            <div class="stat-band band-operator">
+                <div>
+                    <div class="band-label">Operator</div>
+                    <div id="h-user" class="band-value">---</div>
                 </div>
-            </section>
-
-            <!-- Dashboard Cards -->
-            <div class="dashboard-grid">
-                <!-- Player Stats Card -->
-                <div class="card" id="playerCard">
-                    <div class="card-header">
-                        <h3>👤 Player Statistics</h3>
-                        <button class="btn btn-sm refresh-btn" data-refresh="player">Refresh</button>
-                    </div>
-                    <div class="card-body" id="playerContent">
-                        <p class="placeholder">Click "Player Stats" to load data</p>
-                    </div>
-                </div>
-
-                <!-- Faction Insights Card -->
-                <div class="card" id="factionCard">
-                    <div class="card-header">
-                        <h3>👥 Faction Insights</h3>
-                        <button class="btn btn-sm refresh-btn" data-refresh="faction">Refresh</button>
-                    </div>
-                    <div class="card-body" id="factionContent">
-                        <p class="placeholder">Click "Faction Insights" to load data</p>
-                    </div>
-                </div>
-
-                <!-- War Analysis Card -->
-                <div class="card" id="warCard">
-                    <div class="card-header">
-                        <h3>⚔️ War Analysis</h3>
-                        <button class="btn btn-sm refresh-btn" data-refresh="war">Refresh</button>
-                    </div>
-                    <div class="card-body" id="warContent">
-                        <p class="placeholder">Click "War Analysis" to load data</p>
-                    </div>
-                </div>
-
-                <!-- Member Stats Card -->
-                <div class="card" id="membersCard">
-                    <div class="card-header">
-                        <h3>📊 Member Statistics</h3>
-                        <button class="btn btn-sm refresh-btn" data-refresh="members">Refresh</button>
-                    </div>
-                    <div class="card-body" id="membersContent">
-                        <p class="placeholder">Click "Member Stats" to load data</p>
-                    </div>
+                <div>
+                    <div class="band-label">Power</div>
+                    <div id="h-power" class="band-value">---</div>
                 </div>
             </div>
-        </main>
-
-        <!-- Modal for detailed views -->
-        <div id="modal" class="modal">
-            <div class="modal-content">
-                <span class="close">&times;</span>
-                <div id="modalBody"></div>
+            <div class="hub-grid">
+                <div class="hub-col">
+                    <div class="label">Player</div>
+                    <div id="playerContent" class="card"></div>
+                    <button class="btn btn-demo" data-action="player">Load Player Stats</button>
+                </div>
+                <div class="hub-col">
+                    <div class="label">Faction</div>
+                    <div id="factionContent" class="card"></div>
+                    <button class="btn btn-demo" data-action="faction">Load Faction Info</button>
+                </div>
+                <div class="hub-col">
+                    <div class="label">Members</div>
+                    <div id="membersContent" class="card"></div>
+                    <button class="btn btn-demo" data-action="members">Load Members</button>
+                </div>
+            </div>
+            <div class="reports-area">
+                <div class="label">Reports & Faction Comparison</div>
+                <div class="report-row">
+                    <div class="report-block">
+                        <div class="sub-label">Operator Report</div>
+                        <div id="operatorReport" class="card"></div>
+                    </div>
+                    <div class="report-block">
+                        <div class="sub-label">Faction Comparison</div>
+                        <div id="factionComparison" class="card"></div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="generateReportBtn">Generate Reports</button>
             </div>
         </div>
-
-        <!-- Loading Overlay -->
-        <div id="loadingOverlay" class="loading-overlay">
-            <div class="spinner"></div>
-            <p>Loading data...</p>
+        <div id="loadingOverlay" class="loading-overlay"><div class="loader"></div></div>
+        <div id="modal" style="display: none;">
+            <div id="modalBody"></div>
+            <span class="close">&times;</span>
         </div>
     </div>
-
-    <script src="demo-data.js"></script>
-    <script src="api-service.js"></script>
-    <script src="command-hub.js"></script>
 </body>
 </html>

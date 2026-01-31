@@ -1,11 +1,5 @@
-/**
- * Torn API Service Module
- * Centralized data-fetching logic with error handling and caching
- */
-
-// Configuration constants
 const API_CONFIG = {
-    CACHE_TIMEOUT: 5 * 60 * 1000, // 5 minutes in milliseconds
+    CACHE_TIMEOUT: 5 * 60 * 1000,
     BASE_URL: 'https://api.torn.com'
 };
 
@@ -15,117 +9,50 @@ class TornAPIService {
         this.cacheTimeout = API_CONFIG.CACHE_TIMEOUT;
     }
 
-    /**
-     * Generic API fetch with error handling
-     * @param {string} endpoint - The API endpoint
-     * @param {string} apiKey - The API key
-     * @param {Object} options - Additional fetch options
-     * @returns {Promise<Object>} - The API response data
-     */
-    async fetch(endpoint, apiKey, options = {}) {
-        const cacheKey = `${endpoint}-${apiKey}`;
-        
-        // Check cache
+    clearCache() {
+        this.cache.clear();
+    }
+
+    async fetch(url, options = {}) {
+        const cacheKey = url;
         if (this.cache.has(cacheKey)) {
             const cached = this.cache.get(cacheKey);
             if (Date.now() - cached.timestamp < this.cacheTimeout) {
                 return cached.data;
             }
         }
-
         try {
-            const url = `${API_CONFIG.BASE_URL}/${endpoint}?key=${apiKey}`;
-            const response = await fetch(url, {
-                method: 'GET',
-                ...options
-            });
-
+            const response = await fetch(url, { method: 'GET', ...options });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-
             const data = await response.json();
-            
-            // Check for Torn API errors
             if (data.error) {
-                throw new Error(`Torn API Error: ${data.error.error || 'Unknown error'}`);
+                throw new Error(`Torn API Error: ${data.error.error || data.error}`);
             }
-
-            // Cache the response
-            this.cache.set(cacheKey, {
-                data: data,
-                timestamp: Date.now()
-            });
-
+            this.cache.set(cacheKey, { data, timestamp: Date.now() });
             return data;
         } catch (error) {
-            console.error(`Error fetching ${endpoint}:`, error);
+            console.error(`Error fetching ${url}:`, error);
             throw error;
         }
     }
 
-    /**
-     * Fetch player data
-     * @param {string} playerId - The player ID
-     * @param {string} apiKey - The API key
-     * @param {string} selections - Comma-separated selections (e.g., 'profile,battlestats')
-     * @returns {Promise<Object>} - Player data
-     */
-    async getPlayerData(playerId, apiKey, selections = 'profile,battlestats') {
-        const endpoint = `user/${playerId}?selections=${selections}`;
-        return await this.fetch(endpoint, apiKey);
+    async getPlayerData(playerId, apiKey) {
+        const url = `${API_CONFIG.BASE_URL}/user/${playerId}?selections=profile,battlestats&key=${apiKey}`;
+        return await this.fetch(url);
     }
 
-    /**
-     * Fetch faction data
-     * @param {string} factionId - The faction ID
-     * @param {string} apiKey - The API key
-     * @param {string} selections - Comma-separated selections
-     * @returns {Promise<Object>} - Faction data
-     */
-    async getFactionData(factionId, apiKey, selections = 'basic,members') {
-        const endpoint = `faction/${factionId}?selections=${selections}`;
-        return await this.fetch(endpoint, apiKey);
+    async getFactionData(factionId, apiKey) {
+        const url = `${API_CONFIG.BASE_URL}/v2/faction/${factionId}?selections=basic,members&key=${apiKey}`;
+        return await this.fetch(url);
     }
 
-    /**
-     * Fetch member stats from a faction
-     * @param {string} factionId - The faction ID
-     * @param {string} apiKey - The API key
-     * @returns {Promise<Object>} - Member stats
-     */
-    async getMemberStats(factionId, apiKey) {
-        const factionData = await this.getFactionData(factionId, apiKey, 'basic,members');
-        
-        if (!factionData.members) {
-            throw new Error('No member data available');
-        }
-
-        return {
-            totalMembers: Object.keys(factionData.members).length,
-            members: factionData.members
-        };
-    }
-
-    /**
-     * Get cached data for offline mode
-     * @returns {Object} - Cached data
-     */
-    getCachedData() {
-        const cached = {};
-        this.cache.forEach((value, key) => {
-            cached[key] = value.data;
-        });
-        return cached;
-    }
-
-    /**
-     * Clear cache
-     */
-    clearCache() {
-        this.cache.clear();
+    async getUserDisplay(userId, apiKey) {
+        const url = `${API_CONFIG.BASE_URL}/user/${userId}?selections=profile,battlestats&key=${apiKey}`;
+        const res = await this.fetch(url);
+        return { name: (res.name || "OPERATOR").toUpperCase(), total: Number(res.total || 0) };
     }
 }
 
-// Export as singleton
-const apiService = new TornAPIService();
+window.apiService = new TornAPIService();
