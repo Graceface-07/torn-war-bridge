@@ -1,109 +1,79 @@
-export default {
-  async fetch(request, env) {
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type"
-    };
-
-    if (request.method === "OPTIONS") {
-      return new Response(null, { headers: corsHeaders });
+function uploadNewRecordsToKV() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("HUD_MASTER");
+  const lastRow = sheet.getLastRow();
+  const factionId = 42505;
+  const workerUrl = "https://torn-war-bridge.tmecf.workers.dev"; // Your worker
+  
+  const data = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
+  
+  let toUpload = [];
+  
+  // Filter only records marked FALSE in column H (not in KV)
+  data.forEach((row, i) => {
+    const inKV = row[7]; // Column H
+    if (inKV === false || inKV === "FALSE" || inKV === "") {
+      const playerId = row[0].toString().trim();
+      const record = {
+        uid: playerId,
+        fid: factionId,
+        data: {
+          player_id: playerId,
+          name: row[1],
+          total: row[2],
+          strength: row[3],
+          defense: row[4],
+          speed: row[5],
+          dexterity: row[6],
+          timestamp: row[8] || new Date().getTime()
+        }
+      };
+      toUpload.push(record);
     }
-
-    if (request.method === "GET") {
-      const url = new URL(request.url);
-      const fid = url.searchParams.get("fid");
-
-      if (!fid) {
-        return new Response(JSON.stringify({ error: "NO_FACTION_ID" }), {
-          status: 400,
-          headers: corsHeaders
-        });
-      }
-
-      const prefix = `spy_${fid}_`;
-      const list = await env.ROTATOR.list({ prefix });
-
-      const results = {};
-
-      for (const key of list.keys) {
-        const data = await env.ROTATOR.get(key.name, { type: "json" });
-        if (data) {
-          const pid = key.name.replace(prefix, "");
-          results[pid] = data;
-        }
-      }
-
-      return new Response(JSON.stringify({
-        faction: fid,
-        count: Object.keys(results).length,
-        members: results
-      }), {
-        headers: corsHeaders
-      });
-    }
-
-    if (request.method === "POST") {
-      try {
-        const text = await request.text();
-        console.log(`📥 RAW PAYLOAD: ${text.substring(0, 200)}...`);
-        
-        const body = JSON.parse(text);
-        console.log(`✓ JSON parsed successfully`);
-
-        let targets = [];
-
-        if (Array.isArray(body.spies)) {
-          targets = body.spies.filter(t => t.uid && t.data);
-          console.log(`📥 Batch: ${targets.length} valid records from ${body.spies.length} total`);
-        }
-
-        else if (body.uid && body.data) {
-          targets = [body];
-          console.log(`📥 Single: 1 record`);
-        }
-
-        else {
-          console.log(`❌ Invalid payload structure`);
-          return new Response(JSON.stringify({ error: "INVALID_PAYLOAD" }), {
-            status: 400,
-            headers: corsHeaders
-          });
-        }
-
-        let uploaded = 0;
-
-        for (const t of targets) {
-          const key = t.fid ? `spy_${t.fid}_${t.uid}` : `spy_${t.uid}`;
-          await env.ROTATOR.put(key, JSON.stringify(t.data));
-          uploaded++;
-
-          if (uploaded % 50 === 0) {
-            console.log(`✓ Uploaded ${uploaded}...`);
-          }
-        }
-
-        console.log(`✅ COMPLETE: ${uploaded} records`);
-
-        return new Response(JSON.stringify({
-          ok: true,
-          count: uploaded
-        }), {
-          headers: corsHeaders
-        });
-
-      } catch (e) {
-        console.log(`❌ CATCH ERROR: ${e.message}`);
-        return new Response(JSON.stringify({ error: "BAD_JSON", details: e.message }), {
-          status: 400,
-          headers: corsHeaders
-        });
-      }
-    }
-
-    return new Response(JSON.stringify({ error: "METHOD_NOT_ALLOWED" }), {
-      status: 405,
-      headers: corsHeaders
-    });
+  });
+  
+  Logger.log(`📊 Found ${toUpload.length} records to upload`);
+  
+  if (toUpload.length === 0) {
+    Logger.log("✅ All records already in KV!");
+    return;
   }
-};
+  
+  // Upload in batches of 1000
+  const batchSize = 1000;
+  let uploaded = 0;
+  
+  for (let i = 0; i < toUpload.length; i += batchSize) {
+    const batch = toUpload.slice(i, i + batchSize);
+    
+    const payload = {
+      spies: batch
+    };
+    
+    try {
+      Logger.log(`📤 Uploading batch ${Math.floor(i / batchSize) + 1} (${batch.length} records)...`);
+      
+      const response = UrlFetchApp.fetch(workerUrl, {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      });
+      
+      const result = JSON.parse(response.getContentText());
+      
+      if (response.getResponseCode() === 200 && result.ok) {
+        uploaded += result.count;
+        Logger.log(`✅ Batch ${Math.floor(i / batchSize) + 1}: ${result.count} uploaded`);
+      } else {
+        Logger.log(`❌ Batch failed: ${response.getContentText()}`);
+      }
+    } catch (e) {
+      Logger.log(`❌ Error: ${e.message}`);
+    }
+    
+    // Rate limit - wait 1 second between batches
+    Utilities.sleep(1000);
+  }
+  
+  Logger.log(`\n🎉 UPLOAD COMPLETE: ${uploaded}/${toUpload.length} records`);
+}
