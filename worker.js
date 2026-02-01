@@ -11,7 +11,7 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // ---------------------------
+    // -------------------------
     // GET — pull faction intel
     // -------------------------     
     if (request.method === "GET") {
