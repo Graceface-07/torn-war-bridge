@@ -2,7 +2,7 @@ function uploadNewRecordsToKV() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("HUD_MASTER");
   const lastRow = sheet.getLastRow();
   const factionId = 42505;
-  const workerUrl = "https://torn-war-bridge.tmecf.workers.dev"; // Your worker
+  const workerUrl = "https://torn-war-bridge.tmecf.workers.dev";
   
   const data = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
   
