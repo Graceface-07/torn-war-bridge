@@ -10,7 +10,6 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // GET — pull faction intel
     if (request.method === "GET") {
       const url = new URL(request.url);
       const fid = url.searchParams.get("fid");
@@ -44,26 +43,28 @@ export default {
       });
     }
 
-    // POST — write intel (single or batch)
     if (request.method === "POST") {
       try {
-        const body = await request.json();
+        const text = await request.text();
+        console.log(`📥 RAW PAYLOAD: ${text.substring(0, 200)}...`);
+        
+        const body = JSON.parse(text);
+        console.log(`✓ JSON parsed successfully`);
 
         let targets = [];
 
-        // Batch push: { spies: [ { fid, uid, data }, ... ] } OR { spies: [ { uid, data }, ... ] }
         if (Array.isArray(body.spies)) {
           targets = body.spies.filter(t => t.uid && t.data);
-          console.log(`📥 Batch upload: ${targets.length} valid records from ${body.spies.length} total`);
+          console.log(`📥 Batch: ${targets.length} valid records from ${body.spies.length} total`);
         }
 
-        // Single push: { fid, uid, data } OR { uid, data }
         else if (body.uid && body.data) {
           targets = [body];
-          console.log(`📥 Single upload: 1 record`);
+          console.log(`📥 Single: 1 record`);
         }
 
         else {
+          console.log(`❌ Invalid payload structure`);
           return new Response(JSON.stringify({ error: "INVALID_PAYLOAD" }), {
             status: 400,
             headers: corsHeaders
@@ -73,18 +74,16 @@ export default {
         let uploaded = 0;
 
         for (const t of targets) {
-          // Generate key based on whether fid exists
           const key = t.fid ? `spy_${t.fid}_${t.uid}` : `spy_${t.uid}`;
           await env.INTEL.put(key, JSON.stringify(t.data));
           uploaded++;
 
-          // Log every 50
           if (uploaded % 50 === 0) {
-            console.log(`✓ Uploaded ${uploaded} records so far...`);
+            console.log(`✓ Uploaded ${uploaded}...`);
           }
         }
 
-        console.log(`✅ COMPLETE: ${uploaded} records uploaded to KV`);
+        console.log(`✅ COMPLETE: ${uploaded} records`);
 
         return new Response(JSON.stringify({
           ok: true,
@@ -94,8 +93,8 @@ export default {
         });
 
       } catch (e) {
-        console.log(`❌ ERROR: ${e.message}`);
-        return new Response(JSON.stringify({ error: "BAD_JSON" }), {
+        console.log(`❌ CATCH ERROR: ${e.message}`);
+        return new Response(JSON.stringify({ error: "BAD_JSON", details: e.message }), {
           status: 400,
           headers: corsHeaders
         });
