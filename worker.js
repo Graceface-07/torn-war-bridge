@@ -6,14 +6,11 @@ export default {
       "Access-Control-Allow-Headers": "Content-Type"
     };
 
-    // Preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // -------------------------
     // GET — pull faction intel
-    // -------------------------     
     if (request.method === "GET") {
       const url = new URL(request.url);
       const fid = url.searchParams.get("fid");
@@ -47,23 +44,23 @@ export default {
       });
     }
 
-    // -------------------------
     // POST — write intel (single or batch)
-    // -------------------------
     if (request.method === "POST") {
       try {
         const body = await request.json();
 
         let targets = [];
 
-        // Batch push: { spies: [ { fid, uid, data }, ... ] }
+        // Batch push: { spies: [ { fid, uid, data }, ... ] } OR { spies: [ { uid, data }, ... ] }
         if (Array.isArray(body.spies)) {
-          targets = body.spies;
+          targets = body.spies.filter(t => t.uid && t.data);
+          console.log(`📥 Batch upload: ${targets.length} valid records from ${body.spies.length} total`);
         }
 
-        // Single push: { fid, uid, data }
-        else if (body.fid && body.uid && body.data) {
+        // Single push: { fid, uid, data } OR { uid, data }
+        else if (body.uid && body.data) {
           targets = [body];
+          console.log(`📥 Single upload: 1 record`);
         }
 
         else {
@@ -73,19 +70,31 @@ export default {
           });
         }
 
+        let uploaded = 0;
+
         for (const t of targets) {
-          const key = `spy_${t.fid}_${t.uid}`;
+          // Generate key based on whether fid exists
+          const key = t.fid ? `spy_${t.fid}_${t.uid}` : `spy_${t.uid}`;
           await env.INTEL.put(key, JSON.stringify(t.data));
+          uploaded++;
+
+          // Log every 50
+          if (uploaded % 50 === 0) {
+            console.log(`✓ Uploaded ${uploaded} records so far...`);
+          }
         }
+
+        console.log(`✅ COMPLETE: ${uploaded} records uploaded to KV`);
 
         return new Response(JSON.stringify({
           ok: true,
-          count: targets.length
+          count: uploaded
         }), {
           headers: corsHeaders
         });
 
       } catch (e) {
+        console.log(`❌ ERROR: ${e.message}`);
         return new Response(JSON.stringify({ error: "BAD_JSON" }), {
           status: 400,
           headers: corsHeaders
@@ -93,9 +102,6 @@ export default {
       }
     }
 
-    // -------------------------
-    // Unsupported method
-    // -------------------------
     return new Response(JSON.stringify({ error: "METHOD_NOT_ALLOWED" }), {
       status: 405,
       headers: corsHeaders
