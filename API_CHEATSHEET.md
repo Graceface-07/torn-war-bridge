@@ -2,64 +2,59 @@
 
 ## Torn API
 ### Endpoints
-- **GET /torn/**
-  - **Parameters:**
-    - `userId`: The user ID.
-  - **Response Format:** JSON object containing user details.
+- **GET /users**
+  - **Description**: Fetch user details.
+  - **Request**: `{ user_id: "string" }`
+  - **Response**:
+    ```json
+    {
+      "success": true,
+      "data": {
+        "user_id": "string",
+        "username": "string",
+        "status": "string"
+      }
+    }
+    ```
+  - **Required Fields**: `user_id`
 
-### Example Response:
-```json
-{
-  "username": "example_user",
-  "level": 5,
-  "stats": {
-    "strength": 100,
-    "defense": 80
-  }
-}
-```
-
-## FF Scouter API
+### FF Scouter API
 ### Endpoints
-- **GET /ffscouter/**
-  - **Parameters:**
-    - `playerId`: The player ID.
-  - **Response Format:** JSON object with player stats.
-
-### Example Response:
-```json
-{
-  "playerId": "12345",
-  "stats": {
-    "attackPower": 200,
-    "defensePower": 150
-  }
-}
-```
+- **POST /scout**
+  - **Description**: Submit scouting report.
+  - **Request**: `{ "location": "string", "details": "string" }`
+  - **Response**:
+    ```json
+    {
+      "success": true,
+      "report_id": "string"
+    }
+    ```
+  - **Required Fields**: `location`, `details`
 
 ## Discord API
 ### Endpoints
-- **GET /api/v9/users/@me**
-  - **Parameters:**
-    - `authorization`: Bearer token.
-  - **Response Format:** JSON object with user details.
+- **POST /messages**
+  - **Description**: Send a message to a channel.
+  - **Request**: `{ "channel_id": "string", "content": "string" }`
+  - **Response**:
+    ```json
+    {
+      "success": true,
+      "message_id": "string"
+    }
+    ```
+  - **Required Fields**: `channel_id`, `content`
 
-### Example Response:
-```json
-{
-  "id": "987654321",
-  "username": "discord_user",
-  "discriminator": "1234"
-}
-```
-
-## Data Mapping
-- **Torn API** to **FF Scouter API**:
-  - `userId` in Torn is equivalent to `playerId` in FF Scouter.
-- **FF Scouter API** to **Discord API**:
-  - `playerId` corresponds to the `id` in Discord API responses.
-
----
-
-### Additional Info
-- Rate limiting and authentication details should also be included in respective sections.
+## Google Apps Script Webhook
+### Endpoints
+- **POST /webhook**
+  - **Description**: Receive data from external services.
+  - **Request**: `{ "payload": {} }`
+  - **Response**:
+    ```json
+    {
+      "success": true
+    }
+    ```
+  - **Required Fields**: `payload`
