@@ -22,12 +22,12 @@ export default {
       }
 
       const prefix = `spy_${fid}_`;
-      const list = await env.INTEL.list({ prefix });
+      const list = await env.ROTATOR.list({ prefix });
 
       const results = {};
 
       for (const key of list.keys) {
-        const data = await env.INTEL.get(key.name, { type: "json" });
+        const data = await env.ROTATOR.get(key.name, { type: "json" });
         if (data) {
           const pid = key.name.replace(prefix, "");
           results[pid] = data;
@@ -75,7 +75,7 @@ export default {
 
         for (const t of targets) {
           const key = t.fid ? `spy_${t.fid}_${t.uid}` : `spy_${t.uid}`;
-          await env.INTEL.put(key, JSON.stringify(t.data));
+          await env.ROTATOR.put(key, JSON.stringify(t.data));
           uploaded++;
 
           if (uploaded % 50 === 0) {
