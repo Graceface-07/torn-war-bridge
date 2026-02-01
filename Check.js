@@ -54,6 +54,7 @@ function getHTML() {
   button { width: 100%; padding: 12px; background: #222; color: #fff; border: 1px solid #444; border-radius: 6px; cursor: pointer; text-align: left; font-weight: bold; transition: 0.2s; }
   button:hover { background: #333; border-color: var(--prime); }
   .btn-push { color: var(--prime); border: 1px dashed var(--prime); margin-top: auto; text-align: center; }
+  .toggle { display:flex; align-items:center; gap:8px; font-size:12px; color:#ccc; }
   
   /* Main Content */
   .main { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
@@ -82,6 +83,8 @@ function getHTML() {
   <input type="text" id="uid" placeholder="YOUR UID">
   <input type="text" id="fid" placeholder="TARGET FACTION ID">
   
+  <div class="toggle"><input type="checkbox" id="use-personal" checked> <label for="use-personal">Use personal bands</label></div>
+
   <button onclick="runTacticalScan()">Execute Scan</button>
   <button onclick="showReport()">Generate Report</button>
   <button id="push-btn" class="btn-push" onclick="pushToKV()">Daily KV Push</button>
@@ -102,7 +105,20 @@ function getHTML() {
 </div>
 
 <script>
-let SESSION = { data: [], myStats: 0, uid: null };
+let SESSION = { data: [], myStats: 0, uid: null, bands: null };
+const DEFAULT_BANDS = { amber: 3.2, green: 4.6, blue: 5.2 };
+const PERSONAL_PROFILES = {
+  // Personal FF bands for operator UID 2702970 (theharks)
+  '2702970': { amber: 1.3, green: 2.6, blue: 3.4 }
+};
+
+// persist toggle choice
+(function initToggle(){
+  const cb = document.getElementById('use-personal');
+  const saved = localStorage.getItem('usePersonalBands');
+  if(saved !== null) cb.checked = saved === 'true';
+  cb.addEventListener('change', ()=>localStorage.setItem('usePersonalBands', cb.checked));
+})();
 
 function runTacticalScan() {
   const uid = document.getElementById('uid').value;
@@ -110,6 +126,8 @@ function runTacticalScan() {
   if(!uid || !fid) return alert("Credentials missing.");
   
   SESSION.uid = uid;
+  SESSION.bands = resolveBands(uid, document.getElementById('use-personal').checked);
+  SESSION.data = [];
   document.getElementById('grid').innerHTML = "";
   document.getElementById('progress-container').style.display = "block";
   
@@ -128,7 +146,7 @@ function runTacticalScan() {
           const s = Array.isArray(scouter) ? scouter[0] : scouter;
           const stats = Number(s.bs_estimate) || 0;
           const ff = Number(s.fair_fight) || 1.0;
-          const tier = getTier(stats);
+          const tier = getTierFromFF(ff, SESSION.bands);
           
           const obj = { id, name: fac.members[id].name, stats, ff, tier };
           SESSION.data.push(obj);
@@ -145,26 +163,31 @@ function runTacticalScan() {
   }).getUserName(uid);
 }
 
-function getTier(bs) {
-  if (bs < SESSION.myStats * 0.5) return 'secure';
-  if (bs < SESSION.myStats * 1.0) return 'prime';
-  if (bs < SESSION.myStats * 2.0) return 'risky';
-  return 'suicide';
+function resolveBands(uid, usePersonal) {
+  if(usePersonal && PERSONAL_PROFILES[uid]) return PERSONAL_PROFILES[uid];
+  return DEFAULT_BANDS;
+}
+
+function getTierFromFF(ff, bands) {
+  if (ff < bands.amber) return 'secure'; // AMBER
+  if (ff <= bands.green) return 'prime'; // GREEN
+  if (ff <= bands.blue) return 'risky';  // BLUE
+  return 'suicide';                      // RED
 }
 
 function renderCard(o) {
   const card = document.createElement('div');
   card.className = 'card';
   card.style.borderLeft = "4px solid var(--"+o.tier+")";
-  card.innerHTML = \`
+  card.innerHTML = `
     <div>
-      <div style="font-weight:bold;">\${o.name}</div>
-      <div style="font-size:10px; color:#666;">ID: \${o.id}</div>
+      <div style="font-weight:bold;">${o.name}</div>
+      <div style="font-size:10px; color:#666;">ID: ${o.id}</div>
     </div>
     <div style="text-align:right;">
-      <div style="color:var(--\${o.tier}); font-weight:bold;">\${o.ff.toFixed(2)}x</div>
-      <div style="font-size:12px;">\${formatNum(o.stats)}</div>
-    </div>\`;
+      <div style="color:var(--${o.tier}); font-weight:bold;">${o.ff.toFixed(2)}x</div>
+      <div style="font-size:12px;">${formatNum(o.stats)}</div>
+    </div>`;
   document.getElementById('grid').appendChild(card);
 }
 
@@ -192,8 +215,8 @@ function formatNum(n) {
 }
 
 function showReport() {
-  const summary = SESSION.data.reduce((acc, curr) => { acc[curr.tier]++; return acc; }, {secure:0, prime:0, risky:0, suicide:0});
-  alert("WAR REPORT:\\nSecure: " + summary.secure + "\\nPrime: " + summary.prime + "\\nRisky: " + summary.risky + "\\nSuicide: " + summary.suicide);
+  const summary = SESSION.data.reduce((acc, curr) => { acc[curr.tier] = (acc[curr.tier]||0)+1; return acc; }, {secure:0, prime:0, risky:0, suicide:0});
+  alert("WAR REPORT:\nAMBER (secure): " + summary.secure + "\nGREEN (prime): " + summary.prime + "\nBLUE (risky): " + summary.risky + "\nRED (suicide): " + summary.suicide);
 }
 </script>
 </body>
