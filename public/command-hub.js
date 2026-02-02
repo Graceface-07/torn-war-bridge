@@ -252,6 +252,21 @@ class CommandHub {
         if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
         return Number(num).toLocaleString();
     }
+
+    // Test method to load demo data for pagination testing
+    loadDemoMembers() {
+        // Simulate demo data if DemoData is available
+        if (typeof DemoData !== 'undefined') {
+            const demoFaction = DemoData.getFactionData();
+            this.session.members = [];
+            Object.keys(demoFaction.members || {}).forEach(id => {
+                const m = demoFaction.members[id];
+                this.session.members.push(m);
+            });
+            this.pagination.currentPage = 1;
+            this.renderMembersPage();
+        }
+    }
 }
 
 window.commandHub = new CommandHub();
