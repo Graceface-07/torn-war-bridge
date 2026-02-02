@@ -161,11 +161,12 @@ class CommandHub {
         const endIdx = startIdx + this.pagination.itemsPerPage;
         const pageMembers = members.slice(startIdx, endIdx);
 
-        cont.innerHTML = '';
+        // Build HTML array for better performance
+        const htmlParts = [];
         
         // Display current page members
         pageMembers.forEach(m => {
-            cont.innerHTML += `
+            htmlParts.push(`
                 <div class="data-row" style="margin-bottom:8px;">
                     <span class="data-label">Name:</span>
                     <span class="data-value">${m.name || "N/A"}</span>
@@ -178,30 +179,33 @@ class CommandHub {
                     <span class="data-label">Status:</span>
                     <span class="data-value">${(m.last_action && m.last_action.status) || "?"}</span>
                 </div>
-            `;
+            `);
         });
 
         // Add pagination controls if there are multiple pages
         if (totalPages > 1) {
-            cont.innerHTML += `
+            htmlParts.push(`
                 <div class="pagination-controls">
-                    <button class="btn-pagination" id="prevPage" ${currentPage === 1 ? 'disabled' : ''}>← Previous</button>
+                    <button class="btn-pagination btn-prev" ${currentPage === 1 ? 'disabled' : ''}>← Previous</button>
                     <span class="page-indicator">Page ${currentPage} of ${totalPages}</span>
-                    <button class="btn-pagination" id="nextPage" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>
+                    <button class="btn-pagination btn-next" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>
                 </div>
-            `;
-            
-            // Add event listeners for pagination buttons
-            const prevBtn = document.getElementById('prevPage');
-            const nextBtn = document.getElementById('nextPage');
-            
-            if (prevBtn) {
-                prevBtn.addEventListener('click', () => this.goToPreviousPage());
-            }
-            if (nextBtn) {
-                nextBtn.addEventListener('click', () => this.goToNextPage());
-            }
+            `);
         }
+
+        // Set innerHTML once
+        cont.innerHTML = htmlParts.join('');
+        
+        // Use event delegation for pagination buttons
+        cont.removeEventListener('click', this.handlePaginationClick);
+        this.handlePaginationClick = (e) => {
+            if (e.target.classList.contains('btn-prev')) {
+                this.goToPreviousPage();
+            } else if (e.target.classList.contains('btn-next')) {
+                this.goToNextPage();
+            }
+        };
+        cont.addEventListener('click', this.handlePaginationClick);
     }
 
     goToPreviousPage() {
