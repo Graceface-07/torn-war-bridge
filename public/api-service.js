@@ -57,6 +57,12 @@ class TornAPIService {
     async getKeyPermissions(apiKey) {
         const url = `${API_CONFIG.BASE_URL}/user/?selections=key&key=${apiKey}`;
         const data = await this.fetch(url);
+        
+        // Validate that we received expected fields
+        if (!data.access_level && !data.selections) {
+            throw new Error('Invalid API response: missing permissions data');
+        }
+        
         return {
             access_level: data.access_level || 'unknown',
             access_type: data.access_type || 'unknown',

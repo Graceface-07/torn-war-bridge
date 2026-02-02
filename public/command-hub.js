@@ -52,52 +52,75 @@ class CommandHub {
     async checkPermissions() {
         this.showLoading();
         try {
-            // Check permissions for both API keys
-            const tornKeyPerms = await apiService.getKeyPermissions(TORN_API_KEY);
-            const scKeyPerms = await apiService.getKeyPermissions(SC_KEY);
-
-            const permissionsHtml = `
-                <div style="margin-bottom: 20px;">
-                    <div class="data-row" style="background: #1a1a1d; padding: 10px; margin-bottom: 10px; border-radius: 5px;">
-                        <span class="data-label" style="font-weight: bold; color: var(--primary-color);">Torn API Key</span>
-                    </div>
-                    <div class="data-row">
-                        <span class="data-label">Access Level:</span>
-                        <span class="data-value">${tornKeyPerms.access_level}</span>
-                    </div>
-                    <div class="data-row">
-                        <span class="data-label">Access Type:</span>
-                        <span class="data-value">${tornKeyPerms.access_type}</span>
-                    </div>
-                    <div class="data-row">
-                        <span class="data-label">Permissions:</span>
-                        <span class="data-value" style="font-size: 12px;">${tornKeyPerms.selections.join(', ')}</span>
-                    </div>
-                </div>
-                <div>
-                    <div class="data-row" style="background: #1a1a1d; padding: 10px; margin-bottom: 10px; border-radius: 5px;">
-                        <span class="data-label" style="font-weight: bold; color: var(--accent-color);">Scouter API Key</span>
-                    </div>
-                    <div class="data-row">
-                        <span class="data-label">Access Level:</span>
-                        <span class="data-value">${scKeyPerms.access_level}</span>
-                    </div>
-                    <div class="data-row">
-                        <span class="data-label">Access Type:</span>
-                        <span class="data-value">${scKeyPerms.access_type}</span>
-                    </div>
-                    <div class="data-row">
-                        <span class="data-label">Permissions:</span>
-                        <span class="data-value" style="font-size: 12px;">${scKeyPerms.selections.join(', ')}</span>
-                    </div>
-                </div>
-            `;
+            let permissionsHtml = '';
+            
+            // Check Torn API key permissions
+            try {
+                const tornKeyPerms = await apiService.getKeyPermissions(TORN_API_KEY);
+                permissionsHtml += `
+                    <div style="margin-bottom: 20px;">
+                        <div class="perm-header">
+                            <span class="data-label" style="font-weight: bold; color: var(--primary-color);">Torn API Key</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Access Level:</span>
+                            <span class="data-value">${tornKeyPerms.access_level}</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Access Type:</span>
+                            <span class="data-value">${tornKeyPerms.access_type}</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Permissions:</span>
+                            <span class="data-value perm-list">${tornKeyPerms.selections.join(', ')}</span>
+                        </div>
+                    </div>`;
+            } catch (error) {
+                permissionsHtml += `
+                    <div style="margin-bottom: 20px;">
+                        <div class="perm-header">
+                            <span class="data-label" style="font-weight: bold; color: var(--primary-color);">Torn API Key</span>
+                        </div>
+                        <p style="color: var(--danger-color);">Error: ${error.message}</p>
+                    </div>`;
+            }
+            
+            // Check Scouter API key permissions
+            try {
+                const scKeyPerms = await apiService.getKeyPermissions(SC_KEY);
+                permissionsHtml += `
+                    <div>
+                        <div class="perm-header">
+                            <span class="data-label" style="font-weight: bold; color: var(--accent-color);">Scouter API Key</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Access Level:</span>
+                            <span class="data-value">${scKeyPerms.access_level}</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Access Type:</span>
+                            <span class="data-value">${scKeyPerms.access_type}</span>
+                        </div>
+                        <div class="data-row">
+                            <span class="data-label">Permissions:</span>
+                            <span class="data-value perm-list">${scKeyPerms.selections.join(', ')}</span>
+                        </div>
+                    </div>`;
+            } catch (error) {
+                permissionsHtml += `
+                    <div>
+                        <div class="perm-header">
+                            <span class="data-label" style="font-weight: bold; color: var(--accent-color);">Scouter API Key</span>
+                        </div>
+                        <p style="color: var(--danger-color);">Error: ${error.message}</p>
+                    </div>`;
+            }
 
             document.getElementById('permissionsContent').innerHTML = permissionsHtml;
-            this.showStatus('API permissions loaded successfully', 'success');
+            this.showStatus('API permissions loaded', 'success');
         } catch (error) {
             document.getElementById('permissionsContent').innerHTML =
-                `<p class="placeholder" style="color: var(--danger-color);">Error loading permissions: ${error.message}</p>`;
+                `<p style="color: var(--danger-color);">Error loading permissions: ${error.message}</p>`;
             this.showStatus(`Error: ${error.message}`, 'error');
             console.error('Permissions check error:', error);
         } finally {

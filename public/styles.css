@@ -54,6 +54,9 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .report-row {display: flex;gap:22px;}
 .report-block {flex:1;min-width:0;}
 
+.perm-header { background: #1a1a1d; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+.perm-list { font-size: 12px; word-wrap: break-word; }
+
 .loading-overlay {
     display:none; position:fixed; z-index:98; left:0;top:0;width:100vw;height:100vh;
     background:rgba(44,62,80,.13);align-items:center;justify-content:center;
