@@ -58,15 +58,15 @@ class TornAPIService {
         const url = `${API_CONFIG.BASE_URL}/user/?selections=key&key=${apiKey}`;
         const data = await this.fetch(url);
         
-        // Validate that we received expected fields
-        if (!data.access_level || !data.selections) {
-            throw new Error('Invalid API response: missing permissions data');
+        // Validate that we received the selections array (required field)
+        if (!data.selections) {
+            throw new Error('Invalid API response: missing selections data');
         }
         
         return {
             access_level: data.access_level || 'unknown',
             access_type: data.access_type || 'unknown',
-            selections: data.selections || []
+            selections: data.selections
         };
     }
 }
