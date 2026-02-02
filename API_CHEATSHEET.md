@@ -1,50 +1,79 @@
-# Comprehensive API Documentation
+# API Cheatsheet for Torn War Bridge
 
-## Torn API User Profile
-- **Endpoint:** /user/profile
-- **Description:** Fetches user profile information.
-- **Required Fields:** user_id, fields
-- **Response Mapping:** user_id → User ID, name → User Name, status → User Status
+## Overview
+This cheatsheet provides a comprehensive outline of all API endpoints for the Torn War Bridge application, detailing request and response formats, field mappings, and data flow.
 
-## Torn API Faction Basic
-- **Endpoint:** /faction/basic
-- **Description:** Retrieves information about a faction.
-- **Required Fields:** faction_id
-- **Response Mapping:** faction_id → Faction ID, name → Faction Name, members → Member List
+---
 
-## FF Scouter API Get Stats
-- **Endpoint:** /scouter/get_stats
-- **Description:** Gets statistics for a specific player or faction.
-- **Required Fields:** id
-- **Response Mapping:** id → ID, stats → Player Stats
+## API Endpoints
 
-## Google Apps Script Webhook
-- **Description:** Used to send data to Google Apps Script.
-- **Implementation:** A URL is provided to which data can be sent via POST requests.
+### 1. Endpoint: **/api/v1/user**  
+**Method:** GET  
+**Description:** Retrieves user information.  
 
-## Discord API Slash Command
-- **Description:** Allows users to interact with Discord via slash commands.
-- **Implementation:** A command format (e.g., /command_name) leads to specific interactions.
+#### Request Format  
+```json
+{
+   "user_id": "1234"
+}
+```
 
-## Data Flow Summary
-- **Description:** Illustrates the flow of data between APIs and systems.
+#### Response Format  
+```json
+{
+   "user_id": "1234",
+   "username": "Graceface-07",
+   "email": "grace@example.com",
+   "status": "active"
+}
+```
 
-## API Key Locations
-- **Notes:** Ensure API keys are stored securely, not hardcoded.
+### 2. Endpoint: **/api/v1/report**  
+**Method:** POST  
+**Description:** Submits a report.  
 
-## Error Handling
-- **Description:** Steps and actions to take when an error occurs, including retry strategies.
+#### Request Format  
+```json
+{
+   "title": "War Report",
+   "content": "Summary of the war events...",
+   "date": "2026-02-01T13:33:43Z"
+}
+```
 
-## Tier Logic
-- **Description:** Explanation of the tier system.
-- **Logic:** Metrics that define different tiers within the application.
+#### Response Format  
+```json
+{
+   "report_id": "5678",
+   "status": "submitted",
+   "timestamp": "2026-02-01T13:33:43Z"
+}
+```
 
-## Respect Calculation
-- **Calculations:** 
-  - 1.5x for green tier
-  - 1x for blue tier
+---
 
-## Required Fields and Mappings
-- **User Profile:** user_id, user_name, status
-- **Faction:** faction_id, faction_name, members
-- **Scouter:** id, stats
+## Field Mappings
+| API Field       | Description                 |
+|------------------|-----------------------------|
+| user_id          | Unique identifier for user  |
+| username         | User's login name           |
+| email            | User's email address        |
+| status           | Current status of user      |
+| title            | Title of the report         |
+| content          | Content of the report       |
+| report_id        | Unique identifier for report |
+| timestamp        | Time when report was created|
+
+---
+
+## Data Flow
+1. **User Input**: The user inputs data via the interface, such as their ID for retrieving user information or the content of a report.
+2. **API Request**: The application sends a formatted request to the relevant API endpoint based on user actions.
+3. **Server Processing**: The server processes the request, communicates with databases (if needed), and prepares a response.
+4. **API Response**: The application receives the response, which is then displayed back to the user, often including confirmation messages or data visualizations.
+5. **Final Report**: All relevant information is compiled for reporting back to the user, completing the transaction cycle.
+
+---
+
+## Conclusion
+This cheatsheet is your guide to efficiently interacting with the Torn War Bridge API, encompassing all necessary endpoint details and data mapping required for effective utilization and integration.
