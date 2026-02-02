@@ -64,7 +64,7 @@ class CommandHub {
     generatePermissionsHtml(keyName, colorVar, perms) {
         return `
             <div class="perm-header">
-                <span class="data-label" style="font-weight: bold; color: var(${colorVar});">${keyName}</span>
+                <span class="data-label" style="font-weight: bold; color: var(${colorVar});">${this.escapeHtml(keyName)}</span>
             </div>
             <div class="data-row">
                 <span class="data-label">Access Level:</span>
