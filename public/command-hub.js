@@ -6,6 +6,7 @@ class CommandHub {
         this.uid = localStorage.getItem('tornUserId') || '';
         this.fid = localStorage.getItem('tornFactionId') || '';
         this.session = { name: '', myStats: 0, members: [], faction: null };
+        this.pagination = { currentPage: 1, itemsPerPage: 5 };
         this.init();
     }
 
@@ -137,31 +138,84 @@ class CommandHub {
         try {
             const f = await apiService.getFactionData(this.fid, TORN_API_KEY);
             this.session.members = [];
-            const cont = document.getElementById('membersContent');
-            cont.innerHTML = '';
             Object.keys(f.members || {}).forEach(id => {
                 const m = f.members[id];
                 this.session.members.push(m);
-                cont.innerHTML += `
-                    <div class="data-row" style="margin-bottom:8px;">
-                        <span class="data-label">Name:</span>
-                        <span class="data-value">${m.name || "N/A"}</span>
-                        <span class="data-label">Level:</span>
-                        <span class="data-value">${m.level || "?"}</span>
-                        <span class="data-label">Days in Faction:</span>
-                        <span class="data-value">${m.days_in_faction || "?"}</span>
-                        <span class="data-label">Position:</span>
-                        <span class="data-value">${m.position || "?"}</span>
-                        <span class="data-label">Status:</span>
-                        <span class="data-value">${(m.last_action && m.last_action.status) || "?"}</span>
-                    </div>
-                `;
             });
             localStorage.setItem('membersData', JSON.stringify(this.session.members));
+            this.pagination.currentPage = 1; // Reset to first page
+            this.renderMembersPage();
         } catch (error) {
             document.getElementById('membersContent').innerHTML =
                 `<p class="placeholder" style="color: var(--danger-color);">Error loading members: ${error.message}</p>`;
             throw error;
+        }
+    }
+
+    renderMembersPage() {
+        const cont = document.getElementById('membersContent');
+        const members = this.session.members;
+        const totalPages = Math.ceil(members.length / this.pagination.itemsPerPage);
+        const currentPage = this.pagination.currentPage;
+        const startIdx = (currentPage - 1) * this.pagination.itemsPerPage;
+        const endIdx = startIdx + this.pagination.itemsPerPage;
+        const pageMembers = members.slice(startIdx, endIdx);
+
+        cont.innerHTML = '';
+        
+        // Display current page members
+        pageMembers.forEach(m => {
+            cont.innerHTML += `
+                <div class="data-row" style="margin-bottom:8px;">
+                    <span class="data-label">Name:</span>
+                    <span class="data-value">${m.name || "N/A"}</span>
+                    <span class="data-label">Level:</span>
+                    <span class="data-value">${m.level || "?"}</span>
+                    <span class="data-label">Days in Faction:</span>
+                    <span class="data-value">${m.days_in_faction || "?"}</span>
+                    <span class="data-label">Position:</span>
+                    <span class="data-value">${m.position || "?"}</span>
+                    <span class="data-label">Status:</span>
+                    <span class="data-value">${(m.last_action && m.last_action.status) || "?"}</span>
+                </div>
+            `;
+        });
+
+        // Add pagination controls if there are multiple pages
+        if (totalPages > 1) {
+            cont.innerHTML += `
+                <div class="pagination-controls">
+                    <button class="btn-pagination" id="prevPage" ${currentPage === 1 ? 'disabled' : ''}>← Previous</button>
+                    <span class="page-indicator">Page ${currentPage} of ${totalPages}</span>
+                    <button class="btn-pagination" id="nextPage" ${currentPage === totalPages ? 'disabled' : ''}>Next →</button>
+                </div>
+            `;
+            
+            // Add event listeners for pagination buttons
+            const prevBtn = document.getElementById('prevPage');
+            const nextBtn = document.getElementById('nextPage');
+            
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => this.goToPreviousPage());
+            }
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => this.goToNextPage());
+            }
+        }
+    }
+
+    goToPreviousPage() {
+        if (this.pagination.currentPage > 1) {
+            this.pagination.currentPage--;
+            this.renderMembersPage();
+        }
+    }
+
+    goToNextPage() {
+        const totalPages = Math.ceil(this.session.members.length / this.pagination.itemsPerPage);
+        if (this.pagination.currentPage < totalPages) {
+            this.pagination.currentPage++;
+            this.renderMembersPage();
         }
     }
 
