@@ -63,7 +63,9 @@ class CommandHub {
             // Check Torn API key permissions
             try {
                 const tornKeyPerms = await apiService.getKeyPermissions(TORN_API_KEY);
-                const escapedSelections = tornKeyPerms.selections.map(s => this.escapeHtml(s)).join(', ');
+                const escapedSelections = Array.isArray(tornKeyPerms.selections) 
+                    ? tornKeyPerms.selections.map(s => this.escapeHtml(s)).join(', ')
+                    : 'None';
                 permissionsHtml += `
                     <div style="margin-bottom: 20px;">
                         <div class="perm-header">
@@ -95,7 +97,9 @@ class CommandHub {
             // Check Scouter API key permissions
             try {
                 const scKeyPerms = await apiService.getKeyPermissions(SC_KEY);
-                const escapedSelections = scKeyPerms.selections.map(s => this.escapeHtml(s)).join(', ');
+                const escapedSelections = Array.isArray(scKeyPerms.selections)
+                    ? scKeyPerms.selections.map(s => this.escapeHtml(s)).join(', ')
+                    : 'None';
                 permissionsHtml += `
                     <div>
                         <div class="perm-header">
