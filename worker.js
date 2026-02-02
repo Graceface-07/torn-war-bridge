@@ -6,10 +6,14 @@ export default {
       "Access-Control-Allow-Headers": "Content-Type"
     };
 
+    // Preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
 
+    // -------------------------
+    // GET — pull faction ROTATOR
+    // -------------------------
     if (request.method === "GET") {
       const url = new URL(request.url);
       const fid = url.searchParams.get("fid");
@@ -43,64 +47,55 @@ export default {
       });
     }
 
+    // -------------------------
+    // POST — write ROTATOR (single or batch)
+    // -------------------------
     if (request.method === "POST") {
       try {
-        const text = await request.text();
-        console.log(`📥 RAW PAYLOAD: ${text.substring(0, 200)}...`);
-        
-        const body = JSON.parse(text);
-        console.log(`✓ JSON parsed successfully`);
+        const body = await request.json();
 
         let targets = [];
 
+        // Batch push: { spies: [ { fid, uid, data }, ... ] }
         if (Array.isArray(body.spies)) {
-          targets = body.spies.filter(t => t.uid && t.data);
-          console.log(`📥 Batch: ${targets.length} valid records from ${body.spies.length} total`);
+          targets = body.spies;
         }
 
-        else if (body.uid && body.data) {
+        // Single push: { fid, uid, data }
+        else if (body.fid && body.uid && body.data) {
           targets = [body];
-          console.log(`📥 Single: 1 record`);
         }
 
         else {
-          console.log(`❌ Invalid payload structure`);
           return new Response(JSON.stringify({ error: "INVALID_PAYLOAD" }), {
             status: 400,
             headers: corsHeaders
           });
         }
 
-        let uploaded = 0;
-
         for (const t of targets) {
-          const key = t.fid ? `spy_${t.fid}_${t.uid}` : `spy_${t.uid}`;
+          const key = `spy_${t.fid}_${t.uid}`;
           await env.ROTATOR.put(key, JSON.stringify(t.data));
-          uploaded++;
-
-          if (uploaded % 50 === 0) {
-            console.log(`✓ Uploaded ${uploaded}...`);
-          }
         }
-
-        console.log(`✅ COMPLETE: ${uploaded} records`);
 
         return new Response(JSON.stringify({
           ok: true,
-          count: uploaded
+          count: targets.length
         }), {
           headers: corsHeaders
         });
 
       } catch (e) {
-        console.log(`❌ CATCH ERROR: ${e.message}`);
-        return new Response(JSON.stringify({ error: "BAD_JSON", details: e.message }), {
+        return new Response(JSON.stringify({ error: "BAD_JSON" }), {
           status: 400,
           headers: corsHeaders
         });
       }
     }
 
+    // -------------------------
+    // Unsupported method
+    // -------------------------
     return new Response(JSON.stringify({ error: "METHOD_NOT_ALLOWED" }), {
       status: 405,
       headers: corsHeaders
