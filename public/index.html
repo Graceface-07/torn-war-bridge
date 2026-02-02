@@ -9,64 +9,170 @@
     <script defer src="command-hub.js"></script>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Command Hub</h1>
-            <div class="subtitle">Torn Tactical HUD</div>
-            <div class="api-config">
-                <input id="userId" type="number" placeholder="Operator (User ID)">
-                <input id="factionId" type="number" placeholder="Faction ID">
-                <button id="saveIds" class="btn btn-primary">Save IDs</button>
-                <span id="apiStatus" class="status"></span>
+    <div class="app-container">
+        <header class="topbar">
+            <div class="brand-block">
+                <div class="brand">Command Hub</div>
+                <div class="subtitle">Torn Tactical HUD</div>
             </div>
-        </div>
-        <div class="main-dashboard">
-            <div class="stat-band band-operator">
-                <div>
-                    <div class="band-label">Operator</div>
-                    <div id="h-user" class="band-value">---</div>
+            <div class="top-actions">
+                <div class="id-inputs">
+                    <input id="userId" type="number" placeholder="Operator (User ID)">
+                    <input id="factionId" type="number" placeholder="Faction ID">
+                    <button id="saveIds" class="btn btn-primary">Save IDs</button>
                 </div>
-                <div>
-                    <div class="band-label">Power</div>
-                    <div id="h-power" class="band-value">---</div>
-                </div>
+                <div class="status-ribbon" id="apiStatus">Live</div>
             </div>
-            <div class="hub-grid">
-                <div class="hub-col">
-                    <div class="label">Player</div>
-                    <div id="playerContent" class="card"></div>
-                    <button class="btn btn-demo" data-action="player">Load Player Stats</button>
-                </div>
-                <div class="hub-col">
-                    <div class="label">Faction</div>
-                    <div id="factionContent" class="card"></div>
-                    <button class="btn btn-demo" data-action="faction">Load Faction Info</button>
-                </div>
-                <div class="hub-col">
-                    <div class="label">Members</div>
-                    <div id="membersContent" class="card"></div>
-                    <button class="btn btn-demo" data-action="members">Load Members</button>
-                </div>
-            </div>
-            <div class="reports-area">
-                <div class="label">Reports & Faction Comparison</div>
-                <div class="report-row">
-                    <div class="report-block">
-                        <div class="sub-label">Operator Report</div>
-                        <div id="operatorReport" class="card"></div>
+        </header>
+
+        <div class="layout">
+            <aside class="drawer" id="drawer">
+                <div class="drawer-header">
+                    <div>
+                        <div class="drawer-title">Plan & Checklist</div>
+                        <div class="drawer-sub">Month · Week 1–4 · Filters</div>
                     </div>
-                    <div class="report-block">
-                        <div class="sub-label">Faction Comparison</div>
-                        <div id="factionComparison" class="card"></div>
-                    </div>
+                    <button id="drawerToggle" class="btn btn-secondary">Close</button>
                 </div>
-                <button class="btn btn-primary" id="generateReportBtn">Generate Reports</button>
-            </div>
+
+                <div class="filters">
+                    <label>Goal
+                        <select id="filterGoal"></select>
+                    </label>
+                    <label>Status
+                        <select id="filterStatus">
+                            <option value="all">All</option>
+                            <option value="todo">To Do</option>
+                            <option value="doing">Doing</option>
+                            <option value="done">Done</option>
+                        </select>
+                    </label>
+                    <label>Time
+                        <select id="filterTime">
+                            <option value="all">All</option>
+                            <option value="today">Today</option>
+                            <option value="week">This Week</option>
+                            <option value="month">This Month</option>
+                        </select>
+                    </label>
+                </div>
+
+                <form id="taskForm" class="task-form">
+                    <input type="hidden" id="taskId" value="">
+                    <label>Title
+                        <input type="text" id="taskTitle" required placeholder="Task title">
+                    </label>
+                    <label>Goal
+                        <select id="taskGoal"></select>
+                    </label>
+                    <label>Bucket
+                        <select id="taskBucket">
+                            <option value="today">Today</option>
+                            <option value="week1">Week 1</option>
+                            <option value="week2">Week 2</option>
+                            <option value="week3">Week 3</option>
+                            <option value="week4">Week 4</option>
+                            <option value="month">Month</option>
+                        </select>
+                    </label>
+                    <label>Note
+                        <textarea id="taskNote" rows="2" placeholder="Add a note"></textarea>
+                    </label>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Task</button>
+                        <button type="button" id="resetForm" class="btn btn-secondary">Clear</button>
+                    </div>
+                </form>
+
+                <div id="taskList" class="task-list"></div>
+            </aside>
+
+            <main class="main">
+                <div class="top-controls">
+                    <button id="openDrawer" class="btn btn-secondary">Open Plan</button>
+                    <button class="btn btn-secondary" data-action="player">Load Player Stats</button>
+                    <button class="btn btn-secondary" data-action="faction">Load Faction Info</button>
+                    <button class="btn btn-secondary" data-action="members">Load Members</button>
+                    <button class="btn btn-primary" id="generateReportBtn">Generate Reports</button>
+                </div>
+
+                <section class="tiles" id="categoryTiles">
+                    <div class="tile" data-category="stat">
+                        <div class="tile-title">Stat Growth</div>
+                        <div class="tile-sub">Default focus</div>
+                    </div>
+                    <div class="tile" data-category="war">
+                        <div class="tile-title">War Readiness</div>
+                        <div class="tile-sub">Matches / risk</div>
+                    </div>
+                    <div class="tile" data-category="income">
+                        <div class="tile-title">Income</div>
+                        <div class="tile-sub">Money / passive</div>
+                    </div>
+                    <div class="tile" data-category="faction">
+                        <div class="tile-title">Faction Support</div>
+                        <div class="tile-sub">Duties / assists</div>
+                    </div>
+                    <div class="tile" data-category="custom">
+                        <div class="tile-title">Custom</div>
+                        <div class="tile-sub">Your plan</div>
+                    </div>
+                </section>
+
+                <section class="stat-band band-operator">
+                    <div>
+                        <div class="band-label">Operator</div>
+                        <div id="h-user" class="band-value">---</div>
+                    </div>
+                    <div>
+                        <div class="band-label">Power</div>
+                        <div id="h-power" class="band-value">---</div>
+                    </div>
+                </section>
+
+                <section class="hub-grid" id="hudArea">
+                    <div class="hub-col">
+                        <div class="label">Player</div>
+                        <div id="playerContent" class="card"></div>
+                    </div>
+                    <div class="hub-col">
+                        <div class="label">Faction</div>
+                        <div id="factionContent" class="card"></div>
+                    </div>
+                    <div class="hub-col">
+                        <div class="label">Members</div>
+                        <div id="membersContent" class="card"></div>
+                    </div>
+                </section>
+
+                <section class="reports-area">
+                    <div class="label">Reports & Faction Comparison</div>
+                    <div class="report-row">
+                        <div class="report-block">
+                            <div class="sub-label">Operator Report</div>
+                            <div id="operatorReport" class="card"></div>
+                        </div>
+                        <div class="report-block">
+                            <div class="sub-label">Faction Comparison</div>
+                            <div id="factionComparison" class="card"></div>
+                        </div>
+                    </div>
+                </section>
+            </main>
         </div>
+
+        <div class="helper" id="helperPanel">
+            <div class="helper-title">Helper</div>
+            <div class="helper-row"><strong>Quick:</strong> <span id="hQuick">Set IDs and load Player/Faction.</span></div>
+            <div class="helper-row"><strong>Alternatives:</strong> <span id="hAlt">Use cached data if API is slow.</span></div>
+            <div class="helper-row"><strong>Caution:</strong> <span id="hCaution">Respect rate limits.</span></div>
+            <div class="helper-row"><strong>Next step:</strong> <span id="hNext">Open Plan and add Week 1 tasks.</span></div>
+        </div>
+
         <div id="loadingOverlay" class="loading-overlay"><div class="loader"></div></div>
-        <div id="modal" style="display: none;">
-            <div id="modalBody"></div>
-            <span class="close">&times;</span>
+        <div id="modal" class="modal" style="display: none;">
+            <div class="modal-body" id="modalBody"></div>
+            <span class="close" id="modalClose">&times;</span>
         </div>
     </div>
 </body>
