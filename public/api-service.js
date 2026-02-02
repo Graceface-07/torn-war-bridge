@@ -59,7 +59,7 @@ class TornAPIService {
         const data = await this.fetch(url);
         
         // Validate that we received expected fields
-        if (!data.access_level && !data.selections) {
+        if (!data.access_level || !data.selections) {
             throw new Error('Invalid API response: missing permissions data');
         }
         

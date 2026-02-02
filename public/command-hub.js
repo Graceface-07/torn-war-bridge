@@ -49,6 +49,12 @@ class CommandHub {
         if (this.uid && this.fid) { this.showStatus('IDs loaded', 'success'); }
     }
 
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     async checkPermissions() {
         this.showLoading();
         try {
@@ -57,6 +63,7 @@ class CommandHub {
             // Check Torn API key permissions
             try {
                 const tornKeyPerms = await apiService.getKeyPermissions(TORN_API_KEY);
+                const escapedSelections = tornKeyPerms.selections.map(s => this.escapeHtml(s)).join(', ');
                 permissionsHtml += `
                     <div style="margin-bottom: 20px;">
                         <div class="perm-header">
@@ -64,15 +71,15 @@ class CommandHub {
                         </div>
                         <div class="data-row">
                             <span class="data-label">Access Level:</span>
-                            <span class="data-value">${tornKeyPerms.access_level}</span>
+                            <span class="data-value">${this.escapeHtml(tornKeyPerms.access_level)}</span>
                         </div>
                         <div class="data-row">
                             <span class="data-label">Access Type:</span>
-                            <span class="data-value">${tornKeyPerms.access_type}</span>
+                            <span class="data-value">${this.escapeHtml(tornKeyPerms.access_type)}</span>
                         </div>
                         <div class="data-row">
                             <span class="data-label">Permissions:</span>
-                            <span class="data-value perm-list">${tornKeyPerms.selections.join(', ')}</span>
+                            <span class="data-value perm-list">${escapedSelections}</span>
                         </div>
                     </div>`;
             } catch (error) {
@@ -81,13 +88,14 @@ class CommandHub {
                         <div class="perm-header">
                             <span class="data-label" style="font-weight: bold; color: var(--primary-color);">Torn API Key</span>
                         </div>
-                        <p style="color: var(--danger-color);">Error: ${error.message}</p>
+                        <p style="color: var(--danger-color);">Error: ${this.escapeHtml(error.message)}</p>
                     </div>`;
             }
             
             // Check Scouter API key permissions
             try {
                 const scKeyPerms = await apiService.getKeyPermissions(SC_KEY);
+                const escapedSelections = scKeyPerms.selections.map(s => this.escapeHtml(s)).join(', ');
                 permissionsHtml += `
                     <div>
                         <div class="perm-header">
@@ -95,15 +103,15 @@ class CommandHub {
                         </div>
                         <div class="data-row">
                             <span class="data-label">Access Level:</span>
-                            <span class="data-value">${scKeyPerms.access_level}</span>
+                            <span class="data-value">${this.escapeHtml(scKeyPerms.access_level)}</span>
                         </div>
                         <div class="data-row">
                             <span class="data-label">Access Type:</span>
-                            <span class="data-value">${scKeyPerms.access_type}</span>
+                            <span class="data-value">${this.escapeHtml(scKeyPerms.access_type)}</span>
                         </div>
                         <div class="data-row">
                             <span class="data-label">Permissions:</span>
-                            <span class="data-value perm-list">${scKeyPerms.selections.join(', ')}</span>
+                            <span class="data-value perm-list">${escapedSelections}</span>
                         </div>
                     </div>`;
             } catch (error) {
@@ -112,7 +120,7 @@ class CommandHub {
                         <div class="perm-header">
                             <span class="data-label" style="font-weight: bold; color: var(--accent-color);">Scouter API Key</span>
                         </div>
-                        <p style="color: var(--danger-color);">Error: ${error.message}</p>
+                        <p style="color: var(--danger-color);">Error: ${this.escapeHtml(error.message)}</p>
                     </div>`;
             }
 
@@ -120,7 +128,7 @@ class CommandHub {
             this.showStatus('API permissions loaded', 'success');
         } catch (error) {
             document.getElementById('permissionsContent').innerHTML =
-                `<p style="color: var(--danger-color);">Error loading permissions: ${error.message}</p>`;
+                `<p style="color: var(--danger-color);">Error loading permissions: ${this.escapeHtml(error.message)}</p>`;
             this.showStatus(`Error: ${error.message}`, 'error');
             console.error('Permissions check error:', error);
         } finally {
