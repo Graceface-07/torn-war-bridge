@@ -87,9 +87,9 @@ class CommandHub {
             
             // Check Torn API key permissions
             try {
-                const tornKeyPerms = await apiService.getKeyPermissions(TORN_API_KEY);
+                const tornApiKeyPerms = await apiService.getKeyPermissions(TORN_API_KEY);
                 permissionsHtml += '<div style="margin-bottom: 20px;">' + 
-                    this.generatePermissionsHtml('Torn API Key', '--primary-color', tornKeyPerms) + 
+                    this.generatePermissionsHtml('Torn API Key', '--primary-color', tornApiKeyPerms) + 
                     '</div>';
             } catch (error) {
                 permissionsHtml += `
@@ -103,9 +103,9 @@ class CommandHub {
             
             // Check Scouter API key permissions
             try {
-                const scKeyPerms = await apiService.getKeyPermissions(SC_KEY);
+                const scouterApiKeyPerms = await apiService.getKeyPermissions(SC_KEY);
                 permissionsHtml += '<div>' + 
-                    this.generatePermissionsHtml('Scouter API Key', '--accent-color', scKeyPerms) + 
+                    this.generatePermissionsHtml('Scouter API Key', '--accent-color', scouterApiKeyPerms) + 
                     '</div>';
             } catch (error) {
                 permissionsHtml += `
