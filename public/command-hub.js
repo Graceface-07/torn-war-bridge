@@ -55,6 +55,31 @@ class CommandHub {
         return div.innerHTML;
     }
 
+    formatPermissions(selections) {
+        return Array.isArray(selections) 
+            ? selections.map(s => this.escapeHtml(s)).join(', ')
+            : 'None';
+    }
+
+    generatePermissionsHtml(keyName, colorVar, perms) {
+        return `
+            <div class="perm-header">
+                <span class="data-label" style="font-weight: bold; color: var(${colorVar});">${keyName}</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Access Level:</span>
+                <span class="data-value">${this.escapeHtml(perms.access_level)}</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Access Type:</span>
+                <span class="data-value">${this.escapeHtml(perms.access_type)}</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Permissions:</span>
+                <span class="data-value perm-list">${this.formatPermissions(perms.selections)}</span>
+            </div>`;
+    }
+
     async checkPermissions() {
         this.showLoading();
         try {
@@ -63,27 +88,9 @@ class CommandHub {
             // Check Torn API key permissions
             try {
                 const tornKeyPerms = await apiService.getKeyPermissions(TORN_API_KEY);
-                const escapedSelections = Array.isArray(tornKeyPerms.selections) 
-                    ? tornKeyPerms.selections.map(s => this.escapeHtml(s)).join(', ')
-                    : 'None';
-                permissionsHtml += `
-                    <div style="margin-bottom: 20px;">
-                        <div class="perm-header">
-                            <span class="data-label" style="font-weight: bold; color: var(--primary-color);">Torn API Key</span>
-                        </div>
-                        <div class="data-row">
-                            <span class="data-label">Access Level:</span>
-                            <span class="data-value">${this.escapeHtml(tornKeyPerms.access_level)}</span>
-                        </div>
-                        <div class="data-row">
-                            <span class="data-label">Access Type:</span>
-                            <span class="data-value">${this.escapeHtml(tornKeyPerms.access_type)}</span>
-                        </div>
-                        <div class="data-row">
-                            <span class="data-label">Permissions:</span>
-                            <span class="data-value perm-list">${escapedSelections}</span>
-                        </div>
-                    </div>`;
+                permissionsHtml += '<div style="margin-bottom: 20px;">' + 
+                    this.generatePermissionsHtml('Torn API Key', '--primary-color', tornKeyPerms) + 
+                    '</div>';
             } catch (error) {
                 permissionsHtml += `
                     <div style="margin-bottom: 20px;">
@@ -97,27 +104,9 @@ class CommandHub {
             // Check Scouter API key permissions
             try {
                 const scKeyPerms = await apiService.getKeyPermissions(SC_KEY);
-                const escapedSelections = Array.isArray(scKeyPerms.selections)
-                    ? scKeyPerms.selections.map(s => this.escapeHtml(s)).join(', ')
-                    : 'None';
-                permissionsHtml += `
-                    <div>
-                        <div class="perm-header">
-                            <span class="data-label" style="font-weight: bold; color: var(--accent-color);">Scouter API Key</span>
-                        </div>
-                        <div class="data-row">
-                            <span class="data-label">Access Level:</span>
-                            <span class="data-value">${this.escapeHtml(scKeyPerms.access_level)}</span>
-                        </div>
-                        <div class="data-row">
-                            <span class="data-label">Access Type:</span>
-                            <span class="data-value">${this.escapeHtml(scKeyPerms.access_type)}</span>
-                        </div>
-                        <div class="data-row">
-                            <span class="data-label">Permissions:</span>
-                            <span class="data-value perm-list">${escapedSelections}</span>
-                        </div>
-                    </div>`;
+                permissionsHtml += '<div>' + 
+                    this.generatePermissionsHtml('Scouter API Key', '--accent-color', scKeyPerms) + 
+                    '</div>';
             } catch (error) {
                 permissionsHtml += `
                     <div>
