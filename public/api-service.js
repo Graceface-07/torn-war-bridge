@@ -53,6 +53,22 @@ class TornAPIService {
         const res = await this.fetch(url);
         return { name: (res.name || "OPERATOR").toUpperCase(), total: Number(res.total || 0) };
     }
+
+    async getKeyPermissions(apiKey) {
+        const url = `${API_CONFIG.BASE_URL}/user/?selections=key&key=${apiKey}`;
+        const data = await this.fetch(url);
+        
+        // Validate that we received the selections array (required field)
+        if (!data.selections) {
+            throw new Error('Invalid API response: missing selections data');
+        }
+        
+        return {
+            access_level: data.access_level || 'unknown',
+            access_type: data.access_type || 'unknown',
+            selections: data.selections
+        };
+    }
 }
 
 window.apiService = new TornAPIService();
