@@ -16,6 +16,7 @@ class CommandHub {
 
     setupEventListeners() {
         document.getElementById('saveIds').addEventListener('click', () => this.saveIds());
+        document.getElementById('checkPermissions').addEventListener('click', () => this.checkPermissions());
         document.querySelectorAll('[data-action]').forEach(btn => {
             btn.addEventListener('click', e => this.handleAction(e.currentTarget.dataset.action));
         });
@@ -46,6 +47,62 @@ class CommandHub {
 
     loadIdsStatus() {
         if (this.uid && this.fid) { this.showStatus('IDs loaded', 'success'); }
+    }
+
+    async checkPermissions() {
+        this.showLoading();
+        try {
+            // Check permissions for both API keys
+            const tornKeyPerms = await apiService.getKeyPermissions(TORN_API_KEY);
+            const scKeyPerms = await apiService.getKeyPermissions(SC_KEY);
+
+            const permissionsHtml = `
+                <div style="margin-bottom: 20px;">
+                    <div class="data-row" style="background: #1a1a1d; padding: 10px; margin-bottom: 10px; border-radius: 5px;">
+                        <span class="data-label" style="font-weight: bold; color: var(--primary-color);">Torn API Key</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Access Level:</span>
+                        <span class="data-value">${tornKeyPerms.access_level}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Access Type:</span>
+                        <span class="data-value">${tornKeyPerms.access_type}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Permissions:</span>
+                        <span class="data-value" style="font-size: 12px;">${tornKeyPerms.selections.join(', ')}</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="data-row" style="background: #1a1a1d; padding: 10px; margin-bottom: 10px; border-radius: 5px;">
+                        <span class="data-label" style="font-weight: bold; color: var(--accent-color);">Scouter API Key</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Access Level:</span>
+                        <span class="data-value">${scKeyPerms.access_level}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Access Type:</span>
+                        <span class="data-value">${scKeyPerms.access_type}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Permissions:</span>
+                        <span class="data-value" style="font-size: 12px;">${scKeyPerms.selections.join(', ')}</span>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('permissionsContent').innerHTML = permissionsHtml;
+            this.showStatus('API permissions loaded successfully', 'success');
+        } catch (error) {
+            document.getElementById('permissionsContent').innerHTML =
+                `<p class="placeholder" style="color: var(--danger-color);">Error loading permissions: ${error.message}</p>`;
+            this.showStatus(`Error: ${error.message}`, 'error');
+            console.error('Permissions check error:', error);
+        } finally {
+            this.hideLoading();
+        }
     }
 
     showStatus(msg, type) {

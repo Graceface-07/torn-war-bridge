@@ -32,6 +32,8 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 .btn { padding:10px 20px; border:none; border-radius:5px; font-size:1rem; font-weight:500; cursor:pointer; transition:all .18s;}
 .btn-primary { background: var(--accent-color); color: white; }
 .btn-primary:hover { background:#226fa0; }
+.btn-secondary { background: var(--secondary-color); color: white; }
+.btn-secondary:hover { background:#2c3e50; }
 .btn-demo { background:#f6f8fa; color:var(--primary-color); border:1.5px solid var(--accent-color);}
 .btn-demo:hover { background:var(--accent-color); color:#fff;}
 

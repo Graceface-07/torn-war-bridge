@@ -17,6 +17,7 @@
                 <input id="userId" type="number" placeholder="Operator (User ID)">
                 <input id="factionId" type="number" placeholder="Faction ID">
                 <button id="saveIds" class="btn btn-primary">Save IDs</button>
+                <button id="checkPermissions" class="btn btn-secondary">Check API Permissions</button>
                 <span id="apiStatus" class="status"></span>
             </div>
         </div>
@@ -32,6 +33,12 @@
                 </div>
             </div>
             <div class="hub-grid">
+                <div class="hub-col">
+                    <div class="label">API Permissions</div>
+                    <div id="permissionsContent" class="card">
+                        <p class="placeholder">Click "Check API Permissions" to view API key capabilities</p>
+                    </div>
+                </div>
                 <div class="hub-col">
                     <div class="label">Player</div>
                     <div id="playerContent" class="card"></div>
