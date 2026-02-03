@@ -1,0 +1,241 @@
+const TORN_API_KEY = 'CZP2D2ZnbXWsYiDT';
+const SC_KEY = 'rwLgZTyqgWDxhoCx';
+const TORN_MAIN_KEY = 'gc43XVxOpCcwLnY6';
+
+const DEFAULT_USER_ID = '2702970';
+const DEFAULT_FACTION_ID = '42505';
+
+function doGet() {
+  return HtmlService.createHtmlOutput(getHTML())
+    .setTitle('Command Center v2')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function getUserDataV2(uid) {
+  try {
+    var url = 'https://api.torn.com/v2/user/' + uid +
+      '?selections=profile,battlestats,inventory&key=' + TORN_MAIN_KEY;
+    var res = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+    return JSON.parse(res.getContentText());
+  } catch(e) { return {error: "USER_API_FAIL"}; }
+}
+
+function getFactionDataV2(fid) {
+  try {
+    var url = 'https://api.torn.com/v2/faction/' + fid +
+      '?selections=basic&key=' + TORN_MAIN_KEY;
+    var res = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+    return JSON.parse(res.getContentText());
+  } catch(e) { return {error: "FACTION_API_FAIL"}; }
+}
+
+function getHTML() {
+return `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Command Center v2</title>
+<style>
+body { background: #181c22; color: #dee3ea; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; margin: 0;}
+.header { background: #171a1e; padding: 14px 30px; font-size: 20px; color: #fff; font-weight: 800; letter-spacing: 0.7px; display: flex; align-items: center; justify-content: space-between; box-shadow:0 4px 18px #03080e78;}
+.menu-right { display:flex; align-items:center; gap:8px;}
+.select, .button { border: none; background: #232731; color: #eee; border-radius: 5px; padding: 6px 13px; font-size: 13px; font-family: inherit;}
+.select { margin-right: 4px; }
+.button { background: #f5b641; font-weight: 700; color: #181c22; cursor:pointer;}
+.button.secondary { background: #232731; color: #f5b641; border:1.5px solid #f5b641;}
+.live { color:#deb942; font-weight:700; font-size:13px; background:#222932; border-radius:8px; display:inline-block; padding:3px 13px;}
+.tiles { display: flex; flex-wrap: wrap; gap: 22px; margin: 27px 32px 0 32px;}
+.tile {flex:1; min-width:210px; background: linear-gradient(110deg, #212935 64%, #25304a 100%); border: 2.2px solid #313c54; border-radius: 15px; padding: 22px 27px 17px 24px; margin-bottom:0;
+transition: border-color 0.16s, box-shadow 0.18s, background 0.12s; position:relative; cursor:pointer; max-width:278px; box-shadow:0 6px 36px #0007,0 0.5px 0 #15181c;}
+.tile:not(:last-child){margin-right:16px;}
+.tile:hover { border-color: #f5b641; background:linear-gradient(110deg, #262c38 64%, #343b4f 100%);}
+.tile .title { font-size:17.5px; font-weight:900; color:#f5b641; margin-bottom:6px; letter-spacing:0.25px; text-shadow: 0 1.5px 2.5px #0007;}
+.tile .desc { font-size:13.5px; color:#90badf; opacity:0.96; }
+.tile.war .title { color:#51d6ff;}
+.tile.income .title { color:#3ed1a5;}
+.tile.faction .title { color:#be9aff;}
+.tile.custom .title { color:#adb5bd;}
+.hud-panels { margin:22px 30px 0 30px; display: flex; flex-wrap: wrap; gap: 18px;}
+.hud-panel { background:#20242c; border-radius:13px; box-shadow:0 3.5px 19px #0006; border:2px solid #223045;
+padding:24px 28px 21px 21px; min-width:270px; min-height:115px; margin-bottom:18px;
+flex:1 1 265px; max-width:370px; display:flex; flex-direction:column; justify-content:space-between;}
+.hud-panel .panel-title { color:#f5b641; font-weight:800; font-size:18px; margin-bottom:8px;letter-spacing:0.22px;}
+.hud-panel .panel-body {font-size:15px; color:#dde4ee;}
+
+.helper-box { display:none; /* advice now moved! */ }
+.menu-fab { position:fixed; left:7px; top:50%; transform:translateY(-50%); background:#f5b641; color:#232731;
+border-radius:45%; box-shadow:0 4px 16px #0003; width:37px; height:37px; font-size:25px; display:flex;align-items:center;justify-content:center;
+cursor:pointer; z-index:20; border:none; }
+#sidebar {display:none; position:fixed;top:0;left:0;width:285px;height:100vh;background:#15181e;box-shadow:3px 0 16px #0004;z-index:50;padding:22px 17px 14px 24px;}
+#sidebar.open {display:block; animation:slidein 0.2s; }
+@keyframes slidein { from {left: -340px; opacity:0;} to {left:0;opacity:1;} }
+#sidebar .close-btn{position:absolute;top:10px;right:13px;font-size:21px;background:none;border:none;color:#f5b641;font-weight:700;cursor:pointer;}
+#sidebar h2{color:#f5b641;font-size:19px;margin:0 0 16px 0;}
+#sidebar ul{padding:0;list-style:none;}
+#sidebar li{margin:8px 0;font-size:15px;color:#fff;cursor:pointer;}
+#sidebar li:hover{color:#babaff;text-decoration:underline;}
+/* MODAL HUB WINDOW */
+#modal-backdrop {
+  display:none; position:fixed; left:0; top:0; width:100vw; height:100vh;
+  background:rgba(16,16,20,0.87); z-index:99; justify-content:center; align-items:center;
+}
+#modal-backdrop.active{display:flex;}
+#modal-content {
+  width:clamp(380px, 68vw, 730px);
+  background: linear-gradient(110deg, #23273a 72%,#252f43 100%);
+  border-radius: 21px;
+  border:2.7px solid #363c56;
+  box-shadow:0 11px 62px #000c;
+  min-height:350px; min-width:320px; padding:0;position:relative;
+  display:flex; flex-direction:column;overflow:hidden;
+}
+#modal-header {
+  background:#15181f;
+  padding:24px 34px 16px 32px;
+  font-size: 22px;
+  font-weight:900;
+  color: #ffc04c;
+  letter-spacing:0.13px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:2.1px solid #222435;
+}
+#modal-close {
+  background:none; border:none; color:#ffc04c; font-size:30px;font-weight:700;cursor:pointer;line-height:1;
+  margin:-9px 0 0 9px; opacity:0.88; transition:opacity 0.15s;}
+#modal-close:hover{opacity:1;}
+#modal-body { padding:32px 37px 28px 34px; color:#dee3ea; font-size:16.8px; min-height:210px; }
+#modal-section {margin-bottom:20px;}
+#modal-section strong{color:#ffe18a;font-weight:600;}
+/* --- */
+@media(max-width:1020px){ .tiles, .hud-panels{flex-direction:column;} .tile:not(:last-child){margin-right:0;} #sidebar{width:92vw;}
+#modal-body { padding:18px 10vw 16px 6vw;}
+#modal-content{width:98vw;}
+}
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>Command Center v2</div>
+    <div class="menu-right">
+      <button class="button" id="addTaskBtn">Add Task</button>
+      <select class="select" id="goalDropdown"><option>All goals</option></select>
+      <select class="select" id="bucketDropdown"><option>All buckets</option></select>
+      <span class="live">Live</span>
+    </div>
+  </div>
+  <div class="tiles">
+    <div class="tile stat" onclick="openCategoryModal('statGrowth')"><div class="title">Stat Growth</div><div class="desc">Default focus</div></div>
+    <div class="tile war" onclick=""><div class="title">War Readiness</div><div class="desc">Feature coming soon</div></div>
+    <div class="tile income" onclick=""><div class="title">Income</div><div class="desc">Feature coming soon</div></div>
+    <div class="tile faction" onclick=""><div class="title">Faction Support</div><div class="desc">Feature coming soon</div></div>
+    <div class="tile custom" onclick=""><div class="title">Custom</div><div class="desc">Feature coming soon</div></div>
+  </div>
+  <div class="hud-panels" id="hud-panels"></div>
+  <div class="menu-fab" title="Open sidebar menu" id="fabBtn">&#9776;</div>
+  <div id="sidebar">
+    <button class="close-btn" onclick="closeSidebar()">×</button>
+    <h2>Menu</h2>
+    <ul>
+      <li onclick="alert('Goals feature coming soon')">Monthly Goals</li>
+      <li onclick="alert('Task list coming soon')">Task List</li>
+      <li onclick="alert('Settings coming soon')">Settings (soon)</li>
+    </ul>
+  </div>
+  <div id="modal-backdrop">
+    <div id="modal-content">
+      <div id="modal-header">
+        <span id="modal-title"></span>
+        <button id="modal-close" onclick="closeCategoryModal()">&times;</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+<script>
+function openCategoryModal(category) {
+  let title = '';
+  const modalTitle = document.getElementById('modal-title');
+  const modalBody = document.getElementById('modal-body');
+
+  // Clear any existing content in the modal body
+  while (modalBody.firstChild) {
+    modalBody.removeChild(modalBody.firstChild);
+  }
+
+  if (category === 'statGrowth') {
+    title = 'Stat Growth Hub';
+
+    // Section 1: Overview
+    const section1 = document.createElement('div');
+    section1.id = 'modal-section';
+
+    const section1Title = document.createElement('strong');
+    section1Title.textContent = 'Overview:';
+
+    const section1Body = document.createElement('div');
+    section1Body.textContent = 'This is your central hub for maximizing stat gains and planning attack strategies.';
+
+    section1.appendChild(section1Title);
+    section1.appendChild(section1Body);
+    modalBody.appendChild(section1);
+
+    // Section 2: Advice on Attacking
+    const section2 = document.createElement('div');
+    section2.id = 'modal-section';
+
+    const section2Title = document.createElement('strong');
+    section2Title.textContent = 'Advice on Attacking:';
+
+    const adviceList = document.createElement('ul');
+    adviceList.style.marginTop = '6px';
+
+    const adviceItems = [
+      'Target weaker defense or lower levels for more reliable wins.',
+      'Use best multipliers and energy when close to a target stat milestone.',
+      'Balance between gym sessions and hunting for bounties depending on your progress.',
+      'Avoid burning energy if you are at risk of hospital cooldown (<15 minutes).',
+      'Review “battle logs” often to spot easy targets or repeat losses.'
+    ];
+
+    adviceItems.forEach(function(text) {
+      const li = document.createElement('li');
+      li.textContent = text;
+      adviceList.appendChild(li);
+    });
+
+    section2.appendChild(section2Title);
+    section2.appendChild(adviceList);
+    modalBody.appendChild(section2);
+
+    // Section 3: Coming soon
+    const section3 = document.createElement('div');
+    section3.id = 'modal-section';
+    section3.style.marginTop = '23px';
+
+    const section3Title = document.createElement('strong');
+    section3Title.textContent = 'Coming soon:';
+
+    const section3Body = document.createElement('span');
+    section3Body.textContent = ' Progress tracker, attack planner, quick-jump to battle simulator, and more.';
+
+    section3.appendChild(section3Title);
+    section3.appendChild(section3Body);
+    modalBody.appendChild(section3);
+  }
+
+  modalTitle.textContent = title;
+  document.getElementById('modal-backdrop').classList.add('active');
+}
+function closeCategoryModal() {
+  document.getElementById('modal-backdrop').classList.remove('active');
+}
+// Existing buttons/menu logic
+document.getElementById('addTaskBtn').onclick=function(){alert('Task dialog coming soon')};
+document.getElementById('fabBtn').onclick=function(){openSidebar()};
+function openSidebar(){document.getElementById('sidebar').classList.add('open');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');}
+</script>
+</body>
+</html>
+`;
+}
