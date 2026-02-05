@@ -1,326 +1,204 @@
 const TORN_API_KEY = 'CZP2D2ZnbXWsYiDT';
 const SC_KEY = 'rwLgZTyqgWDxhoCx';
-const TORN_MAIN_KEY = 'gc43XVxOpCcwLnY6';
 
 function doGet() {
   return HtmlService.createHtmlOutput(getHTML())
-    .setTitle('Command Center v2')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setTitle('TACTICAL HUD V1.8.3')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
 }
 
-function getUserDataV2(uid) {
+function getScouterDataBatch(targetsCsv, uid) {
   try {
-    var url = 'https://api.torn.com/v2/user/' + encodeURIComponent(uid) +
-      '?selections=profile,battlestats,inventory&key=' + encodeURIComponent(TORN_MAIN_KEY);
-    var res = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
-    var data = JSON.parse(res.getContentText());
-    return { success: true, data: data };
-  } catch(e) {
-    return { success: false, error: 'USER_API_FAIL', details: e.toString() };
-  }
+    const url = "https://ffscouter.com/api/v1/get-stats?key=" + SC_KEY + "&targets=" + targetsCsv + "&user_id=" + uid;
+    return JSON.parse(UrlFetchApp.fetch(url, { muteHttpExceptions: true }).getContentText());
+  } catch (e) { return []; }
 }
 
-function getFactionDataV2(fid) {
+function getFactionData(fid) {
   try {
-    var url = 'https://api.torn.com/v2/faction/' + encodeURIComponent(fid) +
-      '?selections=basic,members&key=' + encodeURIComponent(TORN_MAIN_KEY);
-    var res = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
-    var data = JSON.parse(res.getContentText());
-    return { success: true, data: data };
-  } catch(e) {
-    return { success: false, error: 'FACTION_API_FAIL', details: e.toString() };
-  }
+    const res = UrlFetchApp.fetch("https://api.torn.com/faction/"+fid+"?selections=basic&key="+TORN_API_KEY, { muteHttpExceptions: true });
+    return JSON.parse(res.getContentText());
+  } catch (e) { return { error: "FACTION_API_FAIL" }; }
+}
+
+function getUserName(uid) {
+  try {
+    const res = JSON.parse(UrlFetchApp.fetch("https://api.torn.com/user/"+uid+"?selections=profile,battlestats&key="+SC_KEY, { muteHttpExceptions: true }).getContentText());
+    if (res.error) return { name: "API ERROR", total: 0, errCode: res.error.code };
+    return {
+      name: (res.name || "OPERATOR").toUpperCase(),
+      total: Number(res.total) || 0
+    };
+  } catch (e) { return { name: "FETCH FAIL", total: 0, errCode: "SYSTEM" }; }
 }
 
 function getHTML() {
-return `
-<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Command Center v2</title>
 <style>
-body { background: #181c22; color: #dee3ea; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; margin: 0;}
-.header { background: #171a1e; padding: 14px 30px; font-size: 20px; color: #fff; font-weight: 800; letter-spacing: 0.7px; display: flex; align-items: center; justify-content: space-between; box-shadow:0 4px 18px #03080e78;}
-.menu-right { display:flex; align-items:center; gap:8px;}
-.select, .button { border: none; background: #232731; color: #eee; border-radius: 5px; padding: 6px 13px; font-size: 13px; font-family: inherit;}
-.select { margin-right: 4px; }
-.button { background: #f5b641; font-weight: 700; color: #181c22; cursor:pointer;}
-.button.secondary { background: #232731; color: #f5b641; border:1.5px solid #f5b641;}
-.live { color:#deb942; font-weight:700; font-size:13px; background:#222932; border-radius:8px; display:inline-block; padding:3px 13px;}
-#summarybar {display:none; margin:22px 32px 0 32px; padding:17px 28px; background:#1e232d; border-radius:13px; box-shadow:0 6px 34px #0008; font-size:17px; font-weight:700;letter-spacing:0.13px; color:#fbe39d; border:2.2px solid #353c54;}
-#summarybar .field{margin-right:25px;}
-#setup-modal-backdrop {
-  display: flex; position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:999;
-  background:rgba(18,18,20,.93);align-items:center;justify-content:center;
-}
-#setup-modal-content {background:#21283a;padding:38px 48px 34px 44px;border-radius:21px;box-shadow:0 8px 48px #000b;border:2px solid #353c54;min-width:350px;max-width:94vw;}
-#setup-modal-content h2{margin:0 0 13px 0;color:#ffc04c;font-size:24px;font-weight:900}
-#setup-modal-content label{font-weight:800;color:#decb96;font-size:15.5px;}
-#setup-modal-content input{margin:6px 0 14px 0;font-size:15px;padding:7px 13px;color:#222;border-radius:6px;border:1.3px solid #303a52;}
-#setup-modal-content button{margin-top:11px;padding:7px 26px;font-size:15px;border-radius:6px;background:#f5b641;color:#232731;font-weight:800;border:none;}
-.tiles { display: flex; flex-wrap: wrap; gap: 22px; margin: 27px 32px 0 32px;}
-.tile {flex:1; min-width:210px; background: linear-gradient(110deg, #212935 64%, #25304a 100%); border: 2.2px solid #313c54; border-radius: 15px; padding: 22px 27px 17px 24px; margin-bottom:0;
-transition: border-color 0.16s, box-shadow 0.18s, background 0.12s; position:relative; cursor:pointer; max-width:278px; box-shadow:0 6px 36px #0007,0 0.5px 0 #15181c;}
-.tile:not(:last-child){margin-right:16px;}
-.tile:hover { border-color: #f5b641; background:linear-gradient(110deg, #262c38 64%, #343b4f 100%);}
-.tile .title { font-size:17.5px; font-weight:900; color:#f5b641; margin-bottom:6px; letter-spacing:0.25px; text-shadow: 0 1.5px 2.5px #0007;}
-.tile .desc { font-size:13.5px; color:#90badf; opacity:0.96; }
-.tile.war .title { color:#51d6ff;}
-.tile.income .title { color:#3ed1a5;}
-.tile.faction .title { color:#be9aff;}
-.tile.custom .title { color:#adb5bd;}
-#modal-backdrop {
-  display:none; position:fixed; left:0; top:0; width:100vw; height:100vh;
-  background:rgba(16,16,20,0.87); z-index:99; justify-content:center; align-items:center;
-}
-#modal-backdrop.active{display:flex;}
-#modal-content {
-  width:clamp(380px, 68vw, 730px);
-  background: linear-gradient(110deg, #23273a 72%,#252f43 100%);
-  border-radius: 21px;
-  border:2.7px solid #363c56;
-  box-shadow:0 11px 62px #000c;
-  min-height:350px; min-width:320px; padding:0;position:relative;
-  display:flex; flex-direction:column;overflow:hidden;
-}
-#modal-header {
-  background:#15181f;
-  padding:24px 34px 16px 32px;
-  font-size: 22px;
-  font-weight:900;
-  color: #ffc04c;
-  letter-spacing:0.13px;
-  display:flex;align-items:center;justify-content:space-between;
-  border-bottom:2.1px solid #222435;
-}
-#modal-close {
-  background:none; border:none; color:#ffc04c; font-size:30px;font-weight:700;cursor:pointer;line-height:1;
-  margin:-9px 0 0 9px; opacity:0.88; transition:opacity 0.15s;}
-#modal-close:hover{opacity:1;}
-#modal-body { padding:32px 37px 28px 34px; color:#dee3ea; font-size:16.8px; min-height:210px; }
-@media(max-width:1020px){
-  .tiles{flex-direction:column;}
-  .tile:not(:last-child){margin-right:0;}
-  #modal-body { padding:18px 10vw 16px 6vw;}
-  #modal-content{width:98vw;}
-}
+body { background:#111; color:#fff; font-family:'Inter',sans-serif; margin:0; }
+#main-ui { display:block; }
+#modalReportBg { display:none; position:fixed; left:0;top:0;width:100vw;height:100vh;background:#000;opacity:0.7;z-index:1100; }
+#modalReport { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:1200; min-width:420px; }
+.nav-pill { background:#333; border:1px solid #444; padding:8px 18px; border-radius:25px; color:#fff; cursor:pointer; font-size:16px; font-weight:600; text-decoration:none; border:none; }
 </style>
 </head>
 <body>
-<div id="setup-modal-backdrop">
-  <div id="setup-modal-content">
-    <h2>Welcome to Command Center!</h2>
-    <label>User ID:<br>
-      <input id="setupUserInput" type="number" min="1" required value="2702970"/>
-    </label><br>
-    <label>Faction ID:<br>
-      <input id="setupFactionInput" type="number" min="1" required value="42505"/>
-    </label><br>
-    <button onclick="submitIds()">Enter Dashboard</button>
-    <div id="setupStatus" style="color:#f88;font-weight:700;margin-top:10px;"></div>
-  </div>
+<div id="main-ui">
+  <div style="font-size:24px;margin-bottom:16px;">TACTICAL INTERFACE DEMO</div>
+  <button class="nav-pill" id="reportBtn">GENERATE REPORT</button>
 </div>
-  <div class="header">
-    <div>Command Center v2</div>
-    <div class="menu-right">
-      <button class="button" id="addTaskBtn">Add Task</button>
-      <select class="select" id="goalDropdown"><option>All goals</option></select>
-      <select class="select" id="bucketDropdown"><option>All buckets</option></select>
-      <span class="live">Live</span>
-    </div>
-  </div>
-  <div id="summarybar"></div>
-  <div class="tiles" style="display:none;" id="tilesblock">
-    <div class="tile stat" onclick="openCategoryModal('statGrowth')"><div class="title">Stat Growth</div><div class="desc">Default focus</div></div>
-    <div class="tile war" onclick="openCategoryModal('warReadiness')"><div class="title">War Readiness</div><div class="desc">Click to open</div></div>
-    <div class="tile income" onclick="openCategoryModal('income')"><div class="title">Income</div><div class="desc">Click to open</div></div>
-    <div class="tile faction" onclick="openCategoryModal('factionSupport')"><div class="title">Faction Support</div><div class="desc">Click to open</div></div>
-    <div class="tile custom" onclick="openCategoryModal('custom')"><div class="title">Custom</div><div class="desc">Click to open</div></div>
-  </div>
-  <div id="modal-backdrop">
-    <div id="modal-content">
-      <div id="modal-header">
-        <span id="modal-title"></span>
-        <button id="modal-close" onclick="closeCategoryModal()">&times;</button>
-      </div>
-      <div id="modal-body"></div>
-    </div>
-  </div>
+<div id="modalReportBg"></div>
+<div id="modalReport">
+  <button id="closeReportBtn" style="position:absolute;top:24px;right:38px;background:#181c22;border:none;color:#f6da00;font-size:30px;font-weight:900; cursor:pointer;">✕</button>
+  <div id="reportPanelContent"></div>
+</div>
 <script>
-let currentUserId = '';
-let currentFactionId = '';
-let loadedUser = null;
-let loadedFaction = null;
+window.SESSION = {
+  rawData: [
+    {tier:'easy', ff:3.5},
+    {tier:'easy', ff:3.4},
+    {tier:'easy', ff:3.1},
+    {tier:'prime', ff:2.3},
+    {tier:'risky', ff:1.7},
+    {tier:'suicide', ff:1.1}
+  ]
+};
 
-function submitIds() {
-  let uid = document.getElementById('setupUserInput').value.trim();
-  let fid = document.getElementById('setupFactionInput').value.trim();
-  if (!uid || !fid || isNaN(uid) || isNaN(fid) || uid < 1 || fid < 1) {
-    document.getElementById('setupStatus').textContent = 'Enter valid numeric IDs.';
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('main-ui').style.display = 'block';
+  document.getElementById('modalReportBg').style.display = 'none';
+  document.getElementById('modalReport').style.display = 'none';
+  document.getElementById('reportBtn').onclick = generateReport;
+  document.getElementById('closeReportBtn').onclick = function(){
+    document.getElementById('modalReportBg').style.display = 'none';
+    document.getElementById('modalReport').style.display = 'none';
+  }
+});
+
+function generateReport() {
+  const TIER_MAP = {
+    'easy': 'SAFE', 'prime': 'PRIME', 'risky': 'RISKY', 'suicide': 'SUICIDE',
+    'green': 'SAFE', 'amber': 'PRIME', 'blue': 'RISKY', 'red': 'SUICIDE'
+  };
+  const TIER_COLOR = {
+    'SAFE': '#00ff88',
+    'PRIME': '#f6da00',
+    'RISKY': '#00d4ff',
+    'SUICIDE': '#ff3333'
+  };
+  var data = window.SESSION.rawData;
+  if (!data.length) {
+    alert('No scan data. Run a scan first.');
     return;
   }
-  currentUserId = uid;
-  currentFactionId = fid;
-  document.getElementById('setupStatus').textContent = '';
-  fetchAllData();
-}
+  let tierGroups = { SAFE: [], PRIME: [], RISKY: [], SUICIDE: [] };
+  data.forEach(function(t){
+    var mapped = TIER_MAP[t.tier] || 'RISKY';
+    tierGroups[mapped].push(t);
+  });
 
-// Main data loader (fetch summary for top bar, load faction, show dashboard)
-function fetchAllData() {
-  google.script.run.withSuccessHandler(function(resUser){
-    if(!resUser || !resUser.success) {
-      showSetupError('Error loading user data: ' + (resUser?.error || 'Unknown'));
-      return;
-    }
-    loadedUser = resUser.data;
-    google.script.run.withSuccessHandler(function(resFac){
-      if(!resFac || !resFac.success) {
-        showSetupError('Error loading faction data: ' + (resFac?.error || 'Unknown'));
-        return;
-      }
-      loadedFaction = resFac.data;
-      showDashboard();
-    }).getFactionDataV2(currentFactionId);
-  }).getUserDataV2(currentUserId);
-}
+  var sims = [];
+  var left = 20;
+  ['SAFE','PRIME','RISKY'].forEach(function(tier){
+    tierGroups[tier].sort(function(a,b){return b.ff-a.ff;});
+    tierGroups[tier].forEach(function(t){
+      if(left>0){ sims.push(t); left--; }
+    });
+  });
 
-function showSetupError(msg){
-  document.getElementById('setupStatus').textContent = msg;
-  loadedUser = null; loadedFaction = null;
-}
+  var totalRespect = sims.reduce(function(sum, t){return sum+(t.ff*2.71*1.4);},0);
+  var avgRespect = sims.length ? (totalRespect/sims.length) : 0;
+  var simHits = sims.length;
+  var gap = totalRespect >= 8 ? 0 : (20 - simHits);
 
-// Hide setup modal, show info bar, tiles populated w/ loaded data.
-function showDashboard() {
-  document.getElementById('setup-modal-backdrop').style.display = 'none';
-  displaySummaryBar();
-  document.getElementById('tilesblock').style.display = 'flex';
-}
-
-function displaySummaryBar() {
-  let html = '';
-  if(!loadedUser || !loadedUser.profile) return;
-  let name = loadedUser.profile.name || '-';
-  let lvl = loadedUser.profile.level || '-';
-  let facName = loadedFaction?.basic?.name || '-';
-  let stats = loadedUser.battlestats || {};
-  let totalStats =
-    [stats.strength,stats.speed,stats.defense,stats.dexterity]
-      .map(x=>typeof x==='number'?x:parseFloat(x)||0).reduce((a,b)=>a+b,0);
-  html += `<span class="field">User: <b>${name}</b> (Lv ${lvl})</span>`;
-  html += `<span class="field">Faction: <b>${facName}</b></span>`;
-  html += `<span class="field">Total Battle Stats: <b>${totalStats.toLocaleString()}</b></span>`;
-  document.getElementById('summarybar').innerHTML = html;
-  document.getElementById('summarybar').style.display = 'block';
-}
-
-// Tiles modal triggers, loads live data from loaded objects.
-function openCategoryModal(category) {
-  document.getElementById('modal-title').textContent = getModalTitle(category);
-  document.getElementById('modal-body').innerHTML =
-    '<div style="color:#ccb;opacity:.92;font-size:17px;padding:12px;">Loading...</div>';
-  document.getElementById('modal-backdrop').classList.add('active');
-
-  if(['statGrowth','warReadiness','income','factionSupport'].includes(category)){
-    if(!loadedUser || !loadedFaction){
-      setModalError('Data not loaded. Reload page and enter IDs.');
-      return;
-    }
-    if(category==='statGrowth'){
-      showStatGrowthModal(loadedUser);
-    } else if(category==='warReadiness'){
-      showWarReadinessModal(loadedUser);
-    } else if(category==='income'){
-      showIncomeModal(loadedUser);
-    } else if(category==='factionSupport'){
-      showFactionSupportModal(loadedFaction);
-    }
-  } else if(category==='custom'){
-    document.getElementById('modal-body').innerHTML =
-      '<div><strong>Custom widget area.</strong> Put your own data, reminders, or plugin here.</div>';
+  var verdict = 'COMMAND VERDICT';
+  var status = '';
+  var verdictMsg = '';
+  var verdictColor = '';
+  if (totalRespect < 8) {
+    verdictMsg = "POOR RANK WAR";
+    verdictColor = "#ff3333";
+    status = "8.0 GOAL MATHEMATICALLY IMPOSSIBLE AGAINST THIS POOL";
+  } else if (avgRespect < 1.5) {
+    verdictMsg = "MODERATE RANK WAR";
+    verdictColor = "#f6da00";
+    status = "VICTORY POSSIBLE BUT LOW EFFICIENCY";
+  } else {
+    verdictMsg = "EXCELLENT RANK WAR";
+    verdictColor = "#00ff88";
+    status = "EXPECTED TO EXCEED RESPECT GOAL";
   }
-}
 
-function closeCategoryModal() {
-  document.getElementById('modal-backdrop').classList.remove('active');
-}
-
-function getModalTitle(category) {
-  switch(category){
-    case 'statGrowth':return 'Stat Growth Hub';
-    case 'warReadiness':return 'War Readiness Hub';
-    case 'income':return 'Income & Inventory Hub';
-    case 'factionSupport':return 'Faction Support Hub';
-    case 'custom':return 'Custom Hub';
-    default:return '';
+  function tierCol(NAME, color, metrics) {
+    var lines = '';
+    metrics.forEach(function(m){
+      lines += '<div style="font-size:16px; margin:7px 0;">' + m + '</div>';
+    });
+    return '<div style="flex:1; margin:0 15px;">'
+      + '<div style="color:' + color + '; font-family:Orbitron; font-size:24px; font-weight:700; letter-spacing:2px;">' + NAME + '</div>'
+      + '<div style="margin-top:9px; margin-bottom:10px;">' + lines + '</div>'
+    + '</div>';
   }
-}
 
-function setModalError(msg){
-  document.getElementById('modal-body').innerHTML =
-    '<div style="color:#faa;font-weight:bold;padding:16px;">'+msg+'</div>';
-}
+  function sumRespect(arr) { return arr.reduce(function(a, b){ return a + (b.ff*2.71*1.4); }, 0); }
+  function avgRespectArr(arr) { return arr.length ? sumRespect(arr)/arr.length : 0; }
 
-function showStatGrowthModal(user){
-  let stats = user.battlestats || {};
-  // FF Scouter formula placeholder (replace with exact formula as needed)
-  let multiplier = 1.0;
-  let totalStats =
-    [stats.strength,stats.speed,stats.defense,stats.dexterity]
-      .map(x=>typeof x==='number'?x:parseFloat(x)||0).reduce((a,b)=>a+b,0);
-  let html = '';
-  html += '<div><strong>Player:</strong> <b>' + (user.profile?.name || '') +
-          '</b> (Level: ' + (user.profile?.level || '') + ')</div>';
-  html += '<div style="margin-top:14px;"><strong>Battle Stats:</strong><ul>';
-  html += '<li>Strength: <b>' + (Number(stats.strength).toLocaleString() || '-') + '</b></li>';
-  html += '<li>Speed: <b>' + (Number(stats.speed).toLocaleString() || '-') + '</b></li>';
-  html += '<li>Defense: <b>' + (Number(stats.defense).toLocaleString() || '-') + '</b></li>';
-  html += '<li>Dexterity: <b>' + (Number(stats.dexterity).toLocaleString() || '-') + '</b></li>';
-  html += '</ul></div>';
-  html += '<div style="margin:11px 0;"><strong>Total Battle Stats:</strong> <b>' + totalStats.toLocaleString() + '</b></div>';
-  html += '<div style="margin:11px 0;"><strong>Estimated Multiplier (FF Scouter):</strong> <b>' + multiplier + '</b> <span style="font-size:13px;color:#da8;">[Add formula here]</span></div>';
-  document.getElementById('modal-body').innerHTML = html;
-}
+  var safe = tierGroups.SAFE;
+  var prime = tierGroups.PRIME;
+  var risky = tierGroups.RISKY;
+  var suicide = tierGroups.SUICIDE;
+  var safeHits = sims.filter(function(t){return TIER_MAP[t.tier]==="SAFE";}).length;
+  var primeHits = sims.filter(function(t){return TIER_MAP[t.tier]==="PRIME";}).length;
+  var riskyHits = sims.filter(function(t){return TIER_MAP[t.tier]==="RISKY";}).length;
 
-function showWarReadinessModal(user){
-  let html = '';
-  html += '<div><strong>Vitals:</strong><ul>';
-  html += '<li>Life: <b>'+(user.profile?.life?.current||'-')+'/'+(user.profile?.life?.maximum||'-')+'</b></li>';
-  html += '<li>Energy: <b>'+(user.profile?.energy?.current||'-')+'/'+(user.profile?.energy?.maximum||'-')+'</b></li>';
-  html += '<li>Nerve: <b>'+(user.profile?.nerve?.current||'-')+'/'+(user.profile?.nerve?.maximum||'-')+'</b></li>';
-  html += '<li>Happy: <b>'+(user.profile?.happy?.current||'-')+'/'+(user.profile?.happy?.maximum||'-')+'</b></li>';
-  html += '</ul></div>';
-  document.getElementById('modal-body').innerHTML = html;
-}
+  var outHtml = ''
+  + '<div style="padding:50px 28px 36px 28px; background:#181c22; border-radius:19px; box-sizing:border-box; min-width:420px; max-width:98vw; max-height:97vh; box-shadow: 0 0 64px #000c; position:relative;">'
+    + '<div style="text-align:center; letter-spacing:3px;">'
+      + '<div style="font-family:Orbitron; font-size:27px; color:#f6da00; font-weight:800; margin-bottom:7px;">' + verdict + '</div>'
+      + '<div style="font-family:Orbitron; font-size:37px; color:' + verdictColor + '; font-weight:900; margin-bottom:10px;">' + verdictMsg + '</div>'
+      + '<div style="font-size:16px; color:#fff; font-family:monospace; letter-spacing:2px; margin-bottom:26px; text-transform:uppercase;">' + status + '</div>'
+    + '</div>'
+    + '<div style="margin:0 auto; margin-bottom:36px; text-align:center;">'
+      + '<div style="font-size:20px; font-family:Orbitron; letter-spacing:2px; color:#fff; margin-bottom:11px;">'
+        + '20‑HIT EST.: <span style="font-weight:700;">' + totalRespect.toFixed(2) + ' RESPECT</span></div>'
+      + '<div style="font-size:20px; font-family:Orbitron; letter-spacing:2px; color:#fff; margin-bottom:11px;">'
+        + 'GAP ANALYSIS: <span style="font-weight:700;">' + gap + ' WASTED HITS</span></div>'
+      + '<div style="font-size:20px; font-family:Orbitron; letter-spacing:2px; color:#fff;">'
+        + 'EFFICIENCY: <span style="font-weight:700;">' + avgRespect.toFixed(2) + ' AVG / HIT</span></div>'
+    + '</div>'
+    + '<div style="display:flex; justify-content:center; gap:22px;">'
+      + tierCol('SAFE', TIER_COLOR['SAFE'], [
+        'TARGETS: ' + safe.length,
+        'SIM HITS: ' + safeHits,
+        'EST. RESP: ' + sumRespect(safeHits ? safe.slice(0, safeHits) : []).toFixed(2),
+        'AVG/HIT: ' + avgRespectArr(safeHits ? safe.slice(0, safeHits) : []).toFixed(2)
+      ])
+      + tierCol('PRIME', TIER_COLOR['PRIME'], [
+        'TARGETS: ' + prime.length,
+        'SIM HITS: ' + primeHits,
+        'EST. RESP: ' + sumRespect(primeHits ? prime.slice(0, primeHits) : []).toFixed(2),
+        'AVG/HIT: ' + avgRespectArr(primeHits ? prime.slice(0, primeHits) : []).toFixed(2)
+      ])
+      + tierCol('RISKY', TIER_COLOR['RISKY'], [
+        'TARGETS: ' + risky.length,
+        'SIM HITS: ' + riskyHits,
+        'EST. RESP: ' + sumRespect(riskyHits ? risky.slice(0, riskyHits) : []).toFixed(2),
+        'AVG/HIT: ' + avgRespectArr(riskyHits ? risky.slice(0, riskyHits) : []).toFixed(2)
+      ])
+      + tierCol('SUICIDE', TIER_COLOR['SUICIDE'], [
+        'TARGETS: ' + suicide.length,
+        'STATUS: NOT VIABLE'
+      ])
+    + '</div>'
+  + '</div>';
 
-function showIncomeModal(user){
-  let html = '';
-  html += '<div><strong>Income & Points:</strong><ul>';
-  html += '<li>Cash: <b>$'+(user.profile?.money?.toLocaleString()||'-')+'</b></li>';
-  html += '<li>Points: <b>'+(user.profile?.points||'-')+'</b></li>';
-  html += '</ul></div>';
-  html += '<div style="margin-top:14px;"><strong>Inventory items:</strong> <b>'+ (user.inventory ? Object.keys(user.inventory).length : "0")+'</b></div>';
-  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('reportPanelContent').innerHTML = outHtml;
+  document.getElementById('modalReportBg').style.display = 'block';
+  document.getElementById('modalReport').style.display = 'block';
 }
-
-function showFactionSupportModal(faction){
-  let html = '';
-  html += '<div><strong>Faction:</strong> <b>'+(faction.basic?.name||'-')+'</b></div>';
-  html += '<div style="margin-top:10px;"><strong>Respect:</strong> <b>'+(faction.basic?.respect?.toLocaleString()||'-')+'</b></div>';
-  html += '<div style="margin-top:10px;"><strong>Members:</strong></div>';
-  let members = [];
-  if (faction.members) {
-    for (const id in faction.members) {
-      const m = faction.members[id];
-      members.push(`<li><b>${m.name}</b> (Lv ${m.level})</li>`);
-    }
-  }
-  html += '<ul>' + (members.length ? members.join('') : '<li>No members found.</li>') + '</ul>';
-  document.getElementById('modal-body').innerHTML = html;
-}
-document.getElementById('addTaskBtn').onclick=function(){alert('Task dialog coming soon')};
 </script>
 </body>
-</html>
-`;
+</html>`;
 }
