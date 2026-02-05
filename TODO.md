@@ -91,5 +91,23 @@ Estimated time:
 
 Proceeding now!
 
-Feel free to say "status" for a backup or update at any moment.
+Feel free to sa
+
+
+
+
+
+Add form/input fields for user to enter Torn User ID and Faction ID
+
+Store/remember entered User ID and Faction ID during session (e.g., global JS variable)
+
+Validate inputs for correct format before running API calls
+
+Trigger API fetches using user-supplied IDs rather than hardcoded defaults
+
+Add error/message feedback if Torn API key or IDs are missing or invalid
+
+Optionally, allow user to update/change IDs and refresh data after initial entry
+
+Ensure all modal/popout panels fetch and display new data when IDs are updated
 

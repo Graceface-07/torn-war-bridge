@@ -6,14 +6,11 @@ export default {
       "Access-Control-Allow-Headers": "Content-Type"
     };
 
-    // Preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
     }
 
-    // -------------------------
-    // GET — pull faction ROTATOR
-    // -------------------------
+    // GET — Pull Faction ROTATOR
     if (request.method === "GET") {
       const url = new URL(request.url);
       const fid = url.searchParams.get("fid");
@@ -27,7 +24,6 @@ export default {
 
       const prefix = `spy_${fid}_`;
       const list = await env.ROTATOR.list({ prefix });
-
       const results = {};
 
       for (const key of list.keys) {
@@ -42,60 +38,47 @@ export default {
         faction: fid,
         count: Object.keys(results).length,
         members: results
-      }), {
-        headers: corsHeaders
-      });
+      }), { headers: corsHeaders });
     }
 
-    // -------------------------
-    // POST — write ROTATOR (single or batch)
-    // -------------------------
+    // POST — Write ROTATOR (Parallel Batching)
     if (request.method === "POST") {
       try {
         const body = await request.json();
-
         let targets = [];
 
-        // Batch push: { spies: [ { fid, uid, data }, ... ] }
         if (Array.isArray(body.spies)) {
           targets = body.spies;
-        }
-
-        // Single push: { fid, uid, data }
-        else if (body.fid && body.uid && body.data) {
+        } else if (body.fid && body.uid && body.data) {
           targets = [body];
-        }
-
-        else {
+        } else {
           return new Response(JSON.stringify({ error: "INVALID_PAYLOAD" }), {
             status: 400,
             headers: corsHeaders
           });
         }
 
-        for (const t of targets) {
-          const key = `spy_${t.fid}_${t.uid}`;
-          await env.ROTATOR.put(key, JSON.stringify(t.data));
-        }
+        // Run all KV puts in parallel for speed
+        await Promise.all(
+          targets.map(t => {
+            const key = `spy_${t.fid}_${t.uid}`;
+            return env.ROTATOR.put(key, JSON.stringify(t.data));
+          })
+        );
 
         return new Response(JSON.stringify({
           ok: true,
           count: targets.length
-        }), {
-          headers: corsHeaders
-        });
+        }), { headers: corsHeaders });
 
       } catch (e) {
-        return new Response(JSON.stringify({ error: "BAD_JSON" }), {
+        return new Response(JSON.stringify({ error: "BAD_JSON_OR_KV_FAILURE" }), {
           status: 400,
           headers: corsHeaders
         });
       }
     }
 
-    // -------------------------
-    // Unsupported method
-    // -------------------------
     return new Response(JSON.stringify({ error: "METHOD_NOT_ALLOWED" }), {
       status: 405,
       headers: corsHeaders

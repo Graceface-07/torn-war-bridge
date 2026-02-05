@@ -1,437 +1,326 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Torn Command Center</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-:root {
-  --bg:#0b0f14; --panel:#121822; --panel2:#151c27; --border:#1f2a3a;
-  --text:#e6e9ef; --muted:#9aa7be; --amber:#f5b641; --cyan:#52d6ff;
-  --teal:#3ed1a5; --violet:#b78bff; --danger:#ff5f6d; --success:#6ae38f;
+const TORN_API_KEY = 'CZP2D2ZnbXWsYiDT';
+const SC_KEY = 'rwLgZTyqgWDxhoCx';
+const TORN_MAIN_KEY = 'gc43XVxOpCcwLnY6';
+
+function doGet() {
+  return HtmlService.createHtmlOutput(getHTML())
+    .setTitle('Command Center v2')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
-* { box-sizing:border-box; }
-body { margin:0; background:var(--bg); color:var(--text); font-family:'Inter','Roboto',sans-serif; }
-h1,h2,h3,h4 { margin:0; }
-button { cursor:pointer; }
-.container { display:flex; flex-direction:column; min-height:100vh; }
-.topbar { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:var(--panel); border-bottom:1px solid var(--border); gap:8px; flex-wrap:wrap; }
-.status-ribbon { padding:6px 10px; border:1px solid var(--border); border-radius:8px; font-size:12px; color:var(--amber); }
-.main { display:flex; flex:1; overflow:hidden; }
-.center { flex:1; padding:12px; overflow:auto; }
-.tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; padding:12px; background:var(--panel2); border:1px solid var(--border); border-radius:10px; }
-.tile { padding:12px; background:var(--panel); border:1px solid var(--border); border-radius:10px; transition:0.15s; }
-.tile:hover { border-color:var(--amber); }
-.tile.stat { border-left:4px solid var(--amber); }
-.tile.war { border-left:4px solid var(--cyan); }
-.tile.income { border-left:4px solid var(--teal); }
-.tile.faction { border-left:4px solid var(--violet); }
-.tile.custom { border-left:4px solid var(--muted); }
-.label-sm { font-size:12px; color:var(--muted); }
-.helper { position:fixed; right:12px; bottom:12px; width:280px; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:12px; box-shadow:0 8px 20px rgba(0,0,0,0.35); z-index:5; }
-.helper-section { margin-bottom:8px; font-size:12px; color:var(--muted); }
-.helper-section strong { color:var(--text); }
-.drawer { position:fixed; left:-340px; top:0; width:320px; height:100%; background:var(--panel); border-right:1px solid var(--border); padding:12px; transition:0.2s; overflow:auto; z-index:4; }
-.drawer.open { left:0; }
-.drawer-toggle { position:fixed; left:0; top:50%; transform:translate(-50%,-50%); background:var(--amber); color:#000; padding:8px; border-radius:50%; font-weight:700; border:2px solid #000; z-index:5; }
-.section-title { font-size:13px; color:var(--muted); margin:10px 0 6px; }
-.checklist-item { padding:8px; border:1px solid var(--border); border-radius:8px; margin-bottom:6px; background:var(--panel2); display:grid; grid-template-columns:auto 1fr; gap:8px; align-items:flex-start; }
-.badge { padding:2px 6px; border-radius:6px; font-size:11px; color:#000; font-weight:700; }
-.badge.week { background:var(--amber); }
-.badge.today { background:var(--cyan); color:#000; }
-.badge.month { background:var(--muted); color:#000; }
-.controls { display:flex; gap:6px; flex-wrap:wrap; }
-.button { background:var(--amber); color:#000; border:none; padding:8px 12px; border-radius:8px; font-weight:700; }
-.button.secondary { background:var(--panel2); color:var(--text); border:1px solid var(--border); }
-.modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; z-index:6; }
-.modal { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; width:90%; max-width:720px; max-height:85vh; overflow:auto; }
-.modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-.modal-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; }
-.kpi { padding:10px; border:1px solid var(--border); border-radius:10px; background:var(--panel2); }
-.small { font-size:12px; color:var(--muted); }
-.input-row { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
-input, select, textarea { background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:8px; border-radius:8px; font-size:14px; }
-textarea { width:100%; min-height:50px; }
-.progress { font-size:12px; color:var(--muted); }
-.mark-all { font-size:12px; color:var(--amber); cursor:pointer; }
+
+function getUserDataV2(uid) {
+  try {
+    var url = 'https://api.torn.com/v2/user/' + encodeURIComponent(uid) +
+      '?selections=profile,battlestats,inventory&key=' + encodeURIComponent(TORN_MAIN_KEY);
+    var res = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+    var data = JSON.parse(res.getContentText());
+    return { success: true, data: data };
+  } catch(e) {
+    return { success: false, error: 'USER_API_FAIL', details: e.toString() };
+  }
+}
+
+function getFactionDataV2(fid) {
+  try {
+    var url = 'https://api.torn.com/v2/faction/' + encodeURIComponent(fid) +
+      '?selections=basic,members&key=' + encodeURIComponent(TORN_MAIN_KEY);
+    var res = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+    var data = JSON.parse(res.getContentText());
+    return { success: true, data: data };
+  } catch(e) {
+    return { success: false, error: 'FACTION_API_FAIL', details: e.toString() };
+  }
+}
+
+function getHTML() {
+return `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Command Center v2</title>
+<style>
+body { background: #181c22; color: #dee3ea; font-family: 'Inter', 'Segoe UI', Arial, sans-serif; margin: 0;}
+.header { background: #171a1e; padding: 14px 30px; font-size: 20px; color: #fff; font-weight: 800; letter-spacing: 0.7px; display: flex; align-items: center; justify-content: space-between; box-shadow:0 4px 18px #03080e78;}
+.menu-right { display:flex; align-items:center; gap:8px;}
+.select, .button { border: none; background: #232731; color: #eee; border-radius: 5px; padding: 6px 13px; font-size: 13px; font-family: inherit;}
+.select { margin-right: 4px; }
+.button { background: #f5b641; font-weight: 700; color: #181c22; cursor:pointer;}
+.button.secondary { background: #232731; color: #f5b641; border:1.5px solid #f5b641;}
+.live { color:#deb942; font-weight:700; font-size:13px; background:#222932; border-radius:8px; display:inline-block; padding:3px 13px;}
+#summarybar {display:none; margin:22px 32px 0 32px; padding:17px 28px; background:#1e232d; border-radius:13px; box-shadow:0 6px 34px #0008; font-size:17px; font-weight:700;letter-spacing:0.13px; color:#fbe39d; border:2.2px solid #353c54;}
+#summarybar .field{margin-right:25px;}
+#setup-modal-backdrop {
+  display: flex; position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:999;
+  background:rgba(18,18,20,.93);align-items:center;justify-content:center;
+}
+#setup-modal-content {background:#21283a;padding:38px 48px 34px 44px;border-radius:21px;box-shadow:0 8px 48px #000b;border:2px solid #353c54;min-width:350px;max-width:94vw;}
+#setup-modal-content h2{margin:0 0 13px 0;color:#ffc04c;font-size:24px;font-weight:900}
+#setup-modal-content label{font-weight:800;color:#decb96;font-size:15.5px;}
+#setup-modal-content input{margin:6px 0 14px 0;font-size:15px;padding:7px 13px;color:#222;border-radius:6px;border:1.3px solid #303a52;}
+#setup-modal-content button{margin-top:11px;padding:7px 26px;font-size:15px;border-radius:6px;background:#f5b641;color:#232731;font-weight:800;border:none;}
+.tiles { display: flex; flex-wrap: wrap; gap: 22px; margin: 27px 32px 0 32px;}
+.tile {flex:1; min-width:210px; background: linear-gradient(110deg, #212935 64%, #25304a 100%); border: 2.2px solid #313c54; border-radius: 15px; padding: 22px 27px 17px 24px; margin-bottom:0;
+transition: border-color 0.16s, box-shadow 0.18s, background 0.12s; position:relative; cursor:pointer; max-width:278px; box-shadow:0 6px 36px #0007,0 0.5px 0 #15181c;}
+.tile:not(:last-child){margin-right:16px;}
+.tile:hover { border-color: #f5b641; background:linear-gradient(110deg, #262c38 64%, #343b4f 100%);}
+.tile .title { font-size:17.5px; font-weight:900; color:#f5b641; margin-bottom:6px; letter-spacing:0.25px; text-shadow: 0 1.5px 2.5px #0007;}
+.tile .desc { font-size:13.5px; color:#90badf; opacity:0.96; }
+.tile.war .title { color:#51d6ff;}
+.tile.income .title { color:#3ed1a5;}
+.tile.faction .title { color:#be9aff;}
+.tile.custom .title { color:#adb5bd;}
+#modal-backdrop {
+  display:none; position:fixed; left:0; top:0; width:100vw; height:100vh;
+  background:rgba(16,16,20,0.87); z-index:99; justify-content:center; align-items:center;
+}
+#modal-backdrop.active{display:flex;}
+#modal-content {
+  width:clamp(380px, 68vw, 730px);
+  background: linear-gradient(110deg, #23273a 72%,#252f43 100%);
+  border-radius: 21px;
+  border:2.7px solid #363c56;
+  box-shadow:0 11px 62px #000c;
+  min-height:350px; min-width:320px; padding:0;position:relative;
+  display:flex; flex-direction:column;overflow:hidden;
+}
+#modal-header {
+  background:#15181f;
+  padding:24px 34px 16px 32px;
+  font-size: 22px;
+  font-weight:900;
+  color: #ffc04c;
+  letter-spacing:0.13px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:2.1px solid #222435;
+}
+#modal-close {
+  background:none; border:none; color:#ffc04c; font-size:30px;font-weight:700;cursor:pointer;line-height:1;
+  margin:-9px 0 0 9px; opacity:0.88; transition:opacity 0.15s;}
+#modal-close:hover{opacity:1;}
+#modal-body { padding:32px 37px 28px 34px; color:#dee3ea; font-size:16.8px; min-height:210px; }
+@media(max-width:1020px){
+  .tiles{flex-direction:column;}
+  .tile:not(:last-child){margin-right:0;}
+  #modal-body { padding:18px 10vw 16px 6vw;}
+  #modal-content{width:98vw;}
+}
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="topbar">
+<div id="setup-modal-backdrop">
+  <div id="setup-modal-content">
+    <h2>Welcome to Command Center!</h2>
+    <label>User ID:<br>
+      <input id="setupUserInput" type="number" min="1" required value="2702970"/>
+    </label><br>
+    <label>Faction ID:<br>
+      <input id="setupFactionInput" type="number" min="1" required value="42505"/>
+    </label><br>
+    <button onclick="submitIds()">Enter Dashboard</button>
+    <div id="setupStatus" style="color:#f88;font-weight:700;margin-top:10px;"></div>
+  </div>
+</div>
+  <div class="header">
     <div>Command Center v2</div>
-    <div class="controls">
-      <button class="button secondary" id="btnAddTask">Add Task</button>
-      <select id="filterGoal">
-        <option value="">All goals</option>
-        <option value="stat">Stat Growth</option>
-        <option value="war">War Readiness</option>
-        <option value="income">Income</option>
-        <option value="faction">Faction Support</option>
-        <option value="custom">Custom</option>
-      </select>
-      <select id="filterBucket">
-        <option value="">All buckets</option>
-        <option value="today">Today</option>
-        <option value="week1">Week 1</option>
-        <option value="week2">Week 2</option>
-        <option value="week3">Week 3</option>
-        <option value="week4">Week 4</option>
-        <option value="month">Month</option>
-      </select>
-      <div class="status-ribbon" id="statusRibbon">Live</div>
+    <div class="menu-right">
+      <button class="button" id="addTaskBtn">Add Task</button>
+      <select class="select" id="goalDropdown"><option>All goals</option></select>
+      <select class="select" id="bucketDropdown"><option>All buckets</option></select>
+      <span class="live">Live</span>
     </div>
   </div>
-
-  <div class="main">
-    <div class="center">
-      <div class="tiles" id="tiles"></div>
-      <div id="hudArea" class="label-sm" style="padding:12px;">HUD cards go here (wiring later).</div>
+  <div id="summarybar"></div>
+  <div class="tiles" style="display:none;" id="tilesblock">
+    <div class="tile stat" onclick="openCategoryModal('statGrowth')"><div class="title">Stat Growth</div><div class="desc">Default focus</div></div>
+    <div class="tile war" onclick="openCategoryModal('warReadiness')"><div class="title">War Readiness</div><div class="desc">Click to open</div></div>
+    <div class="tile income" onclick="openCategoryModal('income')"><div class="title">Income</div><div class="desc">Click to open</div></div>
+    <div class="tile faction" onclick="openCategoryModal('factionSupport')"><div class="title">Faction Support</div><div class="desc">Click to open</div></div>
+    <div class="tile custom" onclick="openCategoryModal('custom')"><div class="title">Custom</div><div class="desc">Click to open</div></div>
+  </div>
+  <div id="modal-backdrop">
+    <div id="modal-content">
+      <div id="modal-header">
+        <span id="modal-title"></span>
+        <button id="modal-close" onclick="closeCategoryModal()">&times;</button>
+      </div>
+      <div id="modal-body"></div>
     </div>
   </div>
-</div>
-
-<div class="drawer" id="drawer">
-  <div class="section-title">This Month (Week 1–4)</div>
-  <div id="checklist"></div>
-</div>
-<div class="drawer-toggle" id="drawerToggle">›</div>
-
-<div class="helper" id="helper">
-  <h4>Helper</h4>
-  <div class="helper-section"><strong>Quick:</strong> <span id="hQuick">—</span></div>
-  <div class="helper-section"><strong>Alternatives:</strong> <span id="hAlt">—</span></div>
-  <div class="helper-section"><strong>Caution:</strong> <span id="hCaution">—</span></div>
-  <div class="helper-section"><strong>Next step:</strong> <span id="hNext">—</span></div>
-</div>
-
-<div class="modal-backdrop" id="backdrop">
-  <div class="modal">
-    <div class="modal-header">
-      <div id="modalTitle">Category</div>
-      <button class="button secondary" id="btnCloseModal">Close</button>
-    </div>
-    <div class="modal-grid" id="modalKpis"></div>
-    <div class="section-title">Tasks (Week 1–4)</div>
-    <div id="modalTasks"></div>
-  </div>
-</div>
-
-<div class="modal-backdrop" id="taskModal">
-  <div class="modal" style="max-width:520px;">
-    <div class="modal-header">
-      <div id="taskModalTitle">Add Task</div>
-      <button class="button secondary" id="btnCloseTaskModal">Close</button>
-    </div>
-    <div>
-      <div class="input-row">
-        <input id="taskTitle" placeholder="Task title" style="flex:1;">
-      </div>
-      <div class="input-row">
-        <select id="taskGoal">
-          <option value="stat">Stat Growth</option>
-          <option value="war">War Readiness</option>
-          <option value="income">Income</option>
-          <option value="faction">Faction Support</option>
-          <option value="custom">Custom</option>
-        </select>
-        <select id="taskBucket">
-          <option value="today">Today</option>
-          <option value="week1">Week 1</option>
-          <option value="week2">Week 2</option>
-          <option value="week3">Week 3</option>
-          <option value="week4">Week 4</option>
-          <option value="month">Month</option>
-        </select>
-      </div>
-      <div class="input-row">
-        <textarea id="taskNote" placeholder="Note / rationale (optional)"></textarea>
-      </div>
-      <div class="input-row">
-        <input id="taskLink" placeholder="Link (optional)" style="flex:1;">
-      </div>
-      <div class="input-row" style="justify-content:flex-end; gap:8px;">
-        <button class="button secondary" id="btnSnoozeWeek">Snooze +1 week</button>
-        <button class="button" id="btnSaveTask">Save</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
-const categories = {
-  stat:    { key:'stat',    name:'Stat Growth',     color:'var(--amber)' },
-  war:     { key:'war',     name:'War Readiness',   color:'var(--cyan)' },
-  income:  { key:'income',  name:'Income',          color:'var(--teal)' },
-  faction: { key:'faction', name:'Faction Support', color:'var(--violet)' },
-  custom:  { key:'custom',  name:'Custom',          color:'var(--muted)' }
-};
+let currentUserId = '';
+let currentFactionId = '';
+let loadedUser = null;
+let loadedFaction = null;
 
-const defaults = { tasks: [], currentCategory: 'stat', kpis: {} };
-let state = { tasks: [], currentCategory: 'stat', kpis: {} };
-let editingId = null;
-
-function save() { localStorage.setItem('twb_state', JSON.stringify(state)); }
-function load() {
-  const raw = localStorage.getItem('twb_state');
-  if (raw) {
-    try { state = Object.assign({}, defaults, JSON.parse(raw)); }
-    catch (e) { state = Object.assign({}, defaults); }
+function submitIds() {
+  let uid = document.getElementById('setupUserInput').value.trim();
+  let fid = document.getElementById('setupFactionInput').value.trim();
+  if (!uid || !fid || isNaN(uid) || isNaN(fid) || uid < 1 || fid < 1) {
+    document.getElementById('setupStatus').textContent = 'Enter valid numeric IDs.';
+    return;
   }
-}
-function id() { return 't' + Math.random().toString(36).slice(2,9); }
-function labelBucket(b) {
-  if (b === 'today') return 'Today';
-  if (b === 'month') return 'Month';
-  return b.replace('week','Week ');
-}
-function toggleDrawer(){ document.getElementById('drawer').classList.toggle('open'); }
-
-function setStatus(text, colorVar) {
-  const el = document.getElementById('statusRibbon');
-  el.textContent = text;
-  el.style.color = colorVar ? 'var(' + colorVar + ')' : 'var(--amber)';
+  currentUserId = uid;
+  currentFactionId = fid;
+  document.getElementById('setupStatus').textContent = '';
+  fetchAllData();
 }
 
-function helperSuggest(cat) {
-  const q = document.getElementById('hQuick');
-  const a = document.getElementById('hAlt');
-  const c = document.getElementById('hCaution');
-  const n = document.getElementById('hNext');
-  if (cat.name === 'Stat Growth') {
-    q.textContent = 'Run 2 more stat sessions; focus on best multiplier.';
-    a.textContent = 'If blocked, short warm-up or plan Week 2.';
-    c.textContent = 'Avoid burning energy if hospital countdown <15m.';
-    n.textContent = 'Re-check FF band; rerun scout in 30–45s.';
-  } else {
-    q.textContent = 'Prioritize this category now.';
-    a.textContent = 'If blocked, shift to Stat Growth tasks.';
-    c.textContent = 'Watch timers/limits before committing.';
-    n.textContent = 'Set 1–2 tasks in Week 1, then proceed.';
-  }
-}
-
-function renderTiles() {
-  const el = document.getElementById('tiles');
-  el.innerHTML = '';
-  Object.values(categories).forEach(function(cat) {
-    const div = document.createElement('div');
-    div.className = 'tile ' + cat.key;
-    div.innerHTML = '<div>' + cat.name + '</div><div class="label-sm">' +
-      (cat.key === 'stat' ? 'Default focus' : 'Click to open') +
-      '</div>';
-    div.onclick = function() { openCategory(cat.key); };
-    el.appendChild(div);
-  });
-}
-
-function openCategory(catKey) {
-  state.currentCategory = catKey || 'stat';
-  const c = categories[state.currentCategory];
-  document.getElementById('modalTitle').textContent = c.name;
-  renderModalKpis(c);
-  renderModalTasks(c);
-  document.getElementById('backdrop').style.display = 'flex';
-  helperSuggest(c);
-}
-function closeCategory(){ document.getElementById('backdrop').style.display = 'none'; }
-
-function renderModalKpis(cat) {
-  const el = document.getElementById('modalKpis');
-  el.innerHTML = '';
-  const data = state.kpis[cat.key] || {};
-  const kpis = [];
-  if (cat.key === 'stat') {
-    const done = data.sessionsDone != null ? data.sessionsDone : 0;
-    const plan = data.sessionsPlanned != null ? data.sessionsPlanned : Math.max(done, 5);
-    kpis.push({label:'Sessions done / planned', value: done + ' / ' + plan, sub:'Today'});
-    kpis.push({label:'Time spent', value: data.timeSpent || '—', sub:'Today'});
-    kpis.push({label:'Est. gain', value: data.estGain || '—', sub:'This week'});
-    kpis.push({label:'FF band', value: data.ffBand || '—', sub:'Alignment'});
-  } else {
-    kpis.push({label:'Progress', value: data.progress || '—', sub: data.sub || 'Coming soon'});
-  }
-  kpis.forEach(function(k) {
-    const d = document.createElement('div');
-    d.className = 'kpi';
-    d.innerHTML = '<div class="small">' + k.label + '</div><div style="font-size:16px;font-weight:700;">' + k.value + '</div><div class="small">' + (k.sub || '') + '</div>';
-    el.appendChild(d);
-  });
-}
-
-function renderModalTasks() {
-  const el = document.getElementById('modalTasks');
-  el.innerHTML = '';
-  state.tasks.filter(function(t){ return t.goalId === state.currentCategory; }).forEach(function(t){
-    el.appendChild(renderTaskItem(t, true));
-  });
-}
-
-function renderChecklist(goalId) {
-  const wrap = document.getElementById('checklist');
-  wrap.innerHTML = '';
-  const buckets = ['today','week1','week2','week3','week4','month'];
-  const fGoal = document.getElementById('filterGoal').value;
-  const fBucket = document.getElementById('filterBucket').value;
-
-  const progress = {};
-  state.tasks.forEach(function(t){
-    if (fGoal && t.goalId !== fGoal) return;
-    if (fBucket && t.bucket !== fBucket) return;
-    const key = t.goalId + '-' + t.bucket;
-    if (!progress[key]) progress[key] = { total:0, done:0 };
-    progress[key].total += 1;
-    if (t.status === 'done') progress[key].done += 1;
-  });
-
-  buckets.forEach(function(b){
-    const section = document.createElement('div');
-    section.innerHTML = '<div class="section-title">' + labelBucket(b) + '</div>';
-    state.tasks
-      .filter(function(t){ return (!goalId || t.goalId===goalId); })
-      .filter(function(t){ return fGoal ? t.goalId===fGoal : true; })
-      .filter(function(t){ return fBucket ? t.bucket===fBucket : true; })
-      .filter(function(t){ return t.bucket===b; })
-      .forEach(function(t){ section.appendChild(renderTaskItem(t,false)); });
-    Object.keys(progress).forEach(function(key){
-      const parts = key.split('-'); const g = parts[0]; const buck = parts[1];
-      if (buck === b) {
-        const val = progress[key];
-        const prog = document.createElement('div');
-        prog.className = 'progress';
-        prog.textContent = (categories[g] ? categories[g].name : g) + ': ' + val.done + '/' + val.total + ' done';
-        section.appendChild(prog);
+// Main data loader (fetch summary for top bar, load faction, show dashboard)
+function fetchAllData() {
+  google.script.run.withSuccessHandler(function(resUser){
+    if(!resUser || !resUser.success) {
+      showSetupError('Error loading user data: ' + (resUser?.error || 'Unknown'));
+      return;
+    }
+    loadedUser = resUser.data;
+    google.script.run.withSuccessHandler(function(resFac){
+      if(!resFac || !resFac.success) {
+        showSetupError('Error loading faction data: ' + (resFac?.error || 'Unknown'));
+        return;
       }
-    });
-    wrap.appendChild(section);
-  });
+      loadedFaction = resFac.data;
+      showDashboard();
+    }).getFactionDataV2(currentFactionId);
+  }).getUserDataV2(currentUserId);
 }
 
-function renderTaskItem(t, compact) {
-  const div = document.createElement('div');
-  div.className = 'checklist-item';
-  div.innerHTML =
-    '<input type="checkbox" ' + (t.status==='done' ? 'checked' : '') + ' data-id="' + t.id + '">' +
-    '<div>' +
-      '<div style="display:flex; justify-content:space-between; gap:8px;">' +
-        '<div>' + t.title + '</div>' +
-        '<span class="badge ' + (t.bucket==='today'?'today':t.bucket==='month'?'month':'week') + '">' + labelBucket(t.bucket) + '</span>' +
-      '</div>' +
-      (t.note ? '<div class="small">' + t.note + '</div>' : '') +
-      (t.link ? '<div class="small"><a href="' + t.link + '" target="_blank" style="color:var(--cyan);">Link</a></div>' : '') +
-      '<div class="small">Status: ' + t.status + '</div>' +
-      '<div class="small mark-all" data-mark-goal="' + t.goalId + '">Mark all ' + (categories[t.goalId] ? categories[t.goalId].name : '') + ' done</div>' +
-    '</div>';
-  div.querySelector('input').onchange = function(){ toggleTask(t.id); };
-  div.querySelector('.mark-all').onclick = function(){ markAllDone(t.goalId); };
-  if (!compact) {
-    const ctl = document.createElement('div');
-    ctl.className = 'controls';
-    const btnEdit = document.createElement('button'); btnEdit.className='button secondary'; btnEdit.textContent='Edit'; btnEdit.onclick=function(){ editTask(t.id); };
-    const btnSnooze = document.createElement('button'); btnSnooze.className='button secondary'; btnSnooze.textContent='Snooze +1w'; btnSnooze.onclick=function(){ snoozeTask(t.id); };
-    const btnDel = document.createElement('button'); btnDel.className='button secondary'; btnDel.style.color='var(--danger)'; btnDel.textContent='Delete'; btnDel.onclick=function(){ deleteTask(t.id); };
-    ctl.appendChild(btnEdit); ctl.appendChild(btnSnooze); ctl.appendChild(btnDel);
-    div.appendChild(ctl);
+function showSetupError(msg){
+  document.getElementById('setupStatus').textContent = msg;
+  loadedUser = null; loadedFaction = null;
+}
+
+// Hide setup modal, show info bar, tiles populated w/ loaded data.
+function showDashboard() {
+  document.getElementById('setup-modal-backdrop').style.display = 'none';
+  displaySummaryBar();
+  document.getElementById('tilesblock').style.display = 'flex';
+}
+
+function displaySummaryBar() {
+  let html = '';
+  if(!loadedUser || !loadedUser.profile) return;
+  let name = loadedUser.profile.name || '-';
+  let lvl = loadedUser.profile.level || '-';
+  let facName = loadedFaction?.basic?.name || '-';
+  let stats = loadedUser.battlestats || {};
+  let totalStats =
+    [stats.strength,stats.speed,stats.defense,stats.dexterity]
+      .map(x=>typeof x==='number'?x:parseFloat(x)||0).reduce((a,b)=>a+b,0);
+  html += `<span class="field">User: <b>${name}</b> (Lv ${lvl})</span>`;
+  html += `<span class="field">Faction: <b>${facName}</b></span>`;
+  html += `<span class="field">Total Battle Stats: <b>${totalStats.toLocaleString()}</b></span>`;
+  document.getElementById('summarybar').innerHTML = html;
+  document.getElementById('summarybar').style.display = 'block';
+}
+
+// Tiles modal triggers, loads live data from loaded objects.
+function openCategoryModal(category) {
+  document.getElementById('modal-title').textContent = getModalTitle(category);
+  document.getElementById('modal-body').innerHTML =
+    '<div style="color:#ccb;opacity:.92;font-size:17px;padding:12px;">Loading...</div>';
+  document.getElementById('modal-backdrop').classList.add('active');
+
+  if(['statGrowth','warReadiness','income','factionSupport'].includes(category)){
+    if(!loadedUser || !loadedFaction){
+      setModalError('Data not loaded. Reload page and enter IDs.');
+      return;
+    }
+    if(category==='statGrowth'){
+      showStatGrowthModal(loadedUser);
+    } else if(category==='warReadiness'){
+      showWarReadinessModal(loadedUser);
+    } else if(category==='income'){
+      showIncomeModal(loadedUser);
+    } else if(category==='factionSupport'){
+      showFactionSupportModal(loadedFaction);
+    }
+  } else if(category==='custom'){
+    document.getElementById('modal-body').innerHTML =
+      '<div><strong>Custom widget area.</strong> Put your own data, reminders, or plugin here.</div>';
   }
-  return div;
 }
 
-function toggleTask(id) {
-  state.tasks = state.tasks.map(function(t){ return t.id===id ? Object.assign({}, t, { status: t.status==='done'?'todo':'done', updatedAt: Date.now() }) : t; });
-  save(); renderAll();
-}
-function markAllDone(goalId) {
-  state.tasks = state.tasks.map(function(t){ return t.goalId===goalId ? Object.assign({}, t, { status:'done', updatedAt: Date.now() }) : t; });
-  save(); renderAll();
-}
-function snoozeTask(id) {
-  state.tasks = state.tasks.map(function(t){
-    if (t.id !== id) return t;
-    const order = ['today','week1','week2','week3','week4','month'];
-    const idx = order.indexOf(t.bucket);
-    const next = order[Math.min(order.length-1, idx+1)];
-    return Object.assign({}, t, { bucket: next, updatedAt: Date.now() });
-  });
-  save(); renderAll();
-}
-function deleteTask(id) {
-  state.tasks = state.tasks.filter(function(t){ return t.id !== id; });
-  save(); renderAll();
+function closeCategoryModal() {
+  document.getElementById('modal-backdrop').classList.remove('active');
 }
 
-function openTaskModal(taskId) {
-  editingId = taskId || null;
-  const isEdit = !!taskId;
-  const t = isEdit ? state.tasks.find(function(x){ return x.id===taskId; }) : null;
-  document.getElementById('taskModalTitle').textContent = isEdit ? 'Edit Task' : 'Add Task';
-  document.getElementById('taskTitle').value = t ? t.title : '';
-  document.getElementById('taskGoal').value = t ? t.goalId : 'stat';
-  document.getElementById('taskBucket').value = t ? t.bucket : 'today';
-  document.getElementById('taskNote').value = t ? t.note : '';
-  document.getElementById('taskLink').value = t ? t.link : '';
-  document.getElementById('taskModal').style.display='flex';
-}
-function closeTaskModal(){ document.getElementById('taskModal').style.display='none'; editingId=null; }
-
-function saveTask() {
-  const title = document.getElementById('taskTitle').value.trim();
-  if (!title) { alert('Title required'); return; }
-  const goalId = document.getElementById('taskGoal').value;
-  const bucket = document.getElementById('taskBucket').value;
-  const note = document.getElementById('taskNote').value.trim();
-  const link = document.getElementById('taskLink').value.trim();
-  const now = Date.now();
-  if (editingId) {
-    state.tasks = state.tasks.map(function(t){
-      return t.id===editingId ? Object.assign({}, t, { title, goalId, bucket, note, link, updatedAt: now }) : t;
-    });
-  } else {
-    state.tasks.push({ id:id(), title, goalId, bucket, note, link, status:'todo', createdAt: now, updatedAt: now });
+function getModalTitle(category) {
+  switch(category){
+    case 'statGrowth':return 'Stat Growth Hub';
+    case 'warReadiness':return 'War Readiness Hub';
+    case 'income':return 'Income & Inventory Hub';
+    case 'factionSupport':return 'Faction Support Hub';
+    case 'custom':return 'Custom Hub';
+    default:return '';
   }
-  save(); closeTaskModal(); renderAll();
 }
 
-function editTask(id){ openTaskModal(id); }
-
-function renderAll() {
-  renderTiles();
-  renderChecklist();
-  if (document.getElementById('backdrop').style.display === 'flex') {
-    renderModalTasks();
-    renderModalKpis(categories[state.currentCategory]);
-  }
-  helperSuggest(categories[state.currentCategory]);
+function setModalError(msg){
+  document.getElementById('modal-body').innerHTML =
+    '<div style="color:#faa;font-weight:bold;padding:16px;">'+msg+'</div>';
 }
 
-document.getElementById('drawerToggle').onclick = toggleDrawer;
-document.getElementById('btnCloseModal').onclick = closeCategory;
-document.getElementById('backdrop').onclick = function(e){ if(e.target.id==='backdrop') closeCategory(); };
-document.getElementById('btnAddTask').onclick = function(){ openTaskModal(); };
-document.getElementById('btnCloseTaskModal').onclick = closeTaskModal;
-document.getElementById('taskModal').onclick = function(e){ if(e.target.id==='taskModal') closeTaskModal(); };
-document.getElementById('btnSaveTask').onclick = saveTask;
-document.getElementById('btnSnoozeWeek').onclick = function(){
-  const bucketSel = document.getElementById('taskBucket');
-  const order = ['today','week1','week2','week3','week4','month'];
-  const next = order[Math.min(order.length-1, order.indexOf(bucketSel.value)+1)];
-  bucketSel.value = next;
-};
-document.getElementById('filterGoal').onchange = renderAll;
-document.getElementById('filterBucket').onchange = renderAll;
+function showStatGrowthModal(user){
+  let stats = user.battlestats || {};
+  // FF Scouter formula placeholder (replace with exact formula as needed)
+  let multiplier = 1.0;
+  let totalStats =
+    [stats.strength,stats.speed,stats.defense,stats.dexterity]
+      .map(x=>typeof x==='number'?x:parseFloat(x)||0).reduce((a,b)=>a+b,0);
+  let html = '';
+  html += '<div><strong>Player:</strong> <b>' + (user.profile?.name || '') +
+          '</b> (Level: ' + (user.profile?.level || '') + ')</div>';
+  html += '<div style="margin-top:14px;"><strong>Battle Stats:</strong><ul>';
+  html += '<li>Strength: <b>' + (Number(stats.strength).toLocaleString() || '-') + '</b></li>';
+  html += '<li>Speed: <b>' + (Number(stats.speed).toLocaleString() || '-') + '</b></li>';
+  html += '<li>Defense: <b>' + (Number(stats.defense).toLocaleString() || '-') + '</b></li>';
+  html += '<li>Dexterity: <b>' + (Number(stats.dexterity).toLocaleString() || '-') + '</b></li>';
+  html += '</ul></div>';
+  html += '<div style="margin:11px 0;"><strong>Total Battle Stats:</strong> <b>' + totalStats.toLocaleString() + '</b></div>';
+  html += '<div style="margin:11px 0;"><strong>Estimated Multiplier (FF Scouter):</strong> <b>' + multiplier + '</b> <span style="font-size:13px;color:#da8;">[Add formula here]</span></div>';
+  document.getElementById('modal-body').innerHTML = html;
+}
 
-(function init(){
-  load();
-  renderAll();
-  if (!state.tasks.length) {
-    state.tasks = [
-      {id:id(), title:'Do 2 stat sessions', goalId:'stat', status:'todo', bucket:'week1', note:'Use best gym bonus', link:'', createdAt:Date.now(), updatedAt:Date.now()},
-      {id:id(), title:'Check FF band targets', goalId:'war', status:'todo', bucket:'week1', note:'Aim 3.5–4.4x', link:'', createdAt:Date.now(), updatedAt:Date.now()},
-      {id:id(), title:'Set income routine', goalId:'income', status:'todo', bucket:'week2', note:'Pick passive cycle', link:'', createdAt:Date.now(), updatedAt:Date.now()}
-    ];
-    save();
-    renderAll();
+function showWarReadinessModal(user){
+  let html = '';
+  html += '<div><strong>Vitals:</strong><ul>';
+  html += '<li>Life: <b>'+(user.profile?.life?.current||'-')+'/'+(user.profile?.life?.maximum||'-')+'</b></li>';
+  html += '<li>Energy: <b>'+(user.profile?.energy?.current||'-')+'/'+(user.profile?.energy?.maximum||'-')+'</b></li>';
+  html += '<li>Nerve: <b>'+(user.profile?.nerve?.current||'-')+'/'+(user.profile?.nerve?.maximum||'-')+'</b></li>';
+  html += '<li>Happy: <b>'+(user.profile?.happy?.current||'-')+'/'+(user.profile?.happy?.maximum||'-')+'</b></li>';
+  html += '</ul></div>';
+  document.getElementById('modal-body').innerHTML = html;
+}
+
+function showIncomeModal(user){
+  let html = '';
+  html += '<div><strong>Income & Points:</strong><ul>';
+  html += '<li>Cash: <b>$'+(user.profile?.money?.toLocaleString()||'-')+'</b></li>';
+  html += '<li>Points: <b>'+(user.profile?.points||'-')+'</b></li>';
+  html += '</ul></div>';
+  html += '<div style="margin-top:14px;"><strong>Inventory items:</strong> <b>'+ (user.inventory ? Object.keys(user.inventory).length : "0")+'</b></div>';
+  document.getElementById('modal-body').innerHTML = html;
+}
+
+function showFactionSupportModal(faction){
+  let html = '';
+  html += '<div><strong>Faction:</strong> <b>'+(faction.basic?.name||'-')+'</b></div>';
+  html += '<div style="margin-top:10px;"><strong>Respect:</strong> <b>'+(faction.basic?.respect?.toLocaleString()||'-')+'</b></div>';
+  html += '<div style="margin-top:10px;"><strong>Members:</strong></div>';
+  let members = [];
+  if (faction.members) {
+    for (const id in faction.members) {
+      const m = faction.members[id];
+      members.push(`<li><b>${m.name}</b> (Lv ${m.level})</li>`);
+    }
   }
-})();
+  html += '<ul>' + (members.length ? members.join('') : '<li>No members found.</li>') + '</ul>';
+  document.getElementById('modal-body').innerHTML = html;
+}
+document.getElementById('addTaskBtn').onclick=function(){alert('Task dialog coming soon')};
 </script>
 </body>
 </html>
+`;
+}
