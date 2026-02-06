@@ -49,14 +49,14 @@ export default {
       const prefix = `spy_${fid}_`;
 
       const list = await trap("KV LIST", () =>
-        env.INTEL.list({ prefix })
+        env.ROTATOR.list({ prefix })
       );
 
       const results = {};
 
       for (const key of list.keys) {
         const data = await trap("KV GET " + key.name, () =>
-          env.INTEL.get(key.name, { type: "json" })
+          env.ROTATOR.get(key.name, { type: "json" })
         );
         if (data) {
           const pid = key.name.replace(prefix, "");
@@ -109,7 +109,7 @@ export default {
       for (const t of targets) {
         const key = `spy_${t.fid}_${t.uid}`;
         await trap("KV PUT " + key, () =>
-          env.INTEL.put(key, JSON.stringify(t.data))
+          env.ROTATOR.put(key, JSON.stringify(t.data))
         );
       }
 
