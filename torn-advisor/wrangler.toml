@@ -1,0 +1,53 @@
+# Cloudflare Workers Configuration
+# This file tells Cloudflare how to deploy your worker
+
+name = "torn-advisor"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# Use workers.dev subdomain (free)
+workers_dev = true
+
+# Or use custom domain (uncomment and configure):
+# routes = [
+#   { pattern = "advisor.yourdomain.com/*", zone_name = "yourdomain.com" }
+# ]
+
+# KV Namespace Bindings
+# Replace these IDs with your actual namespace IDs after creating them
+[[kv_namespaces]]
+binding = "TORN_DATA"
+id = "YOUR_KV_NAMESPACE_ID_HERE"  # Run: wrangler kv:namespace create "TORN_DATA"
+
+# If you want to use your existing spy database KV:
+# [[kv_namespaces]]
+# binding = "SPY_DB"
+# id = "your_existing_spy_database_id"
+
+# Environment Variables (non-secret)
+[vars]
+ENVIRONMENT = "production"
+WORKER_URL = "https://torn-advisor.YOUR-SUBDOMAIN.workers.dev"
+
+# Secrets (set via: wrangler secret put SECRET_NAME)
+# - DISCORD_TOKEN (your Discord bot token)
+# - DISCORD_PUBLIC_KEY (from Discord developer portal)
+# - TORN_API_KEY (optional, for fetching live data)
+
+# Cron Triggers (scheduled tasks)
+# [triggers]
+# crons = ["0 */6 * * *"]  # Run every 6 hours
+
+# Limits
+[limits]
+cpu_ms = 50  # Maximum CPU time per request (default: 50ms)
+
+# Build configuration
+[build]
+command = ""  # No build step needed for vanilla JS
+
+# Development
+[dev]
+ip = "0.0.0.0"
+port = 8787
+local_protocol = "http"

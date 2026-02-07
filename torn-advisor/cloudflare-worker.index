@@ -1,0 +1,176 @@
+/**
+ * TORN TACTICAL ADVISOR - Cloudflare Worker
+ * Main entry point for handling requests
+ */
+
+import { handleDiscordInteraction } from './discord-handler';
+import { combatIntelligence } from './combat-intelligence';
+import { getAdvisorUI } from './ui/advisor-ui';
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    
+    // CORS headers for web requests
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    };
+    
+    // Handle CORS preflight
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
+    }
+    
+    try {
+      // Route: Discord interactions
+      if (url.pathname === '/discord' && request.method === 'POST') {
+        return await handleDiscordInteraction(request, env);
+      }
+      
+      // Route: Web UI (main page)
+      if (url.pathname === '/' || url.pathname === '/advisor') {
+        return new Response(getAdvisorUI(), {
+          headers: {
+            'Content-Type': 'text/html;charset=UTF-8',
+            ...corsHeaders
+          }
+        });
+      }
+      
+      // Route: API - Analyze target
+      if (url.pathname === '/api/analyze' && request.method === 'POST') {
+        const body = await request.json();
+        const analysis = await analyzeTarget(body, env);
+        
+        return new Response(JSON.stringify(analysis), {
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+      
+      // Route: API - Get user data
+      if (url.pathname === '/api/user' && request.method === 'GET') {
+        const userId = url.searchParams.get('id');
+        const userData = await env.TORN_DATA.get(`user:${userId}`);
+        
+        return new Response(userData || JSON.stringify({ error: 'User not found' }), {
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+      
+      // Route: API - Save user data
+      if (url.pathname === '/api/user' && request.method === 'POST') {
+        const body = await request.json();
+        await env.TORN_DATA.put(`user:${body.userId}`, JSON.stringify(body));
+        
+        return new Response(JSON.stringify({ success: true }), {
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+      
+      // Route: API - Get spy data (from your existing database)
+      if (url.pathname === '/api/spy' && request.method === 'GET') {
+        const targetId = url.searchParams.get('id');
+        
+        // Access your existing spy database
+        // Adjust the key format to match your existing setup
+        const spyData = await env.TORN_DATA.get(`spy:${targetId}`);
+        
+        return new Response(spyData || JSON.stringify({ error: 'No spy data found' }), {
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+      
+      // Route: Health check
+      if (url.pathname === '/health') {
+        return new Response(JSON.stringify({ 
+          status: 'healthy',
+          timestamp: new Date().toISOString(),
+          version: '1.0.0'
+        }), {
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          }
+        });
+      }
+      
+      // 404 - Not Found
+      return new Response('Not Found', { 
+        status: 404,
+        headers: corsHeaders
+      });
+      
+    } catch (error) {
+      console.error('Worker error:', error);
+      
+      return new Response(JSON.stringify({ 
+        error: 'Internal Server Error',
+        message: error.message 
+      }), {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          ...corsHeaders
+        }
+      });
+    }
+  }
+};
+
+/**
+ * Analyze a target and provide combat recommendations
+ */
+async function analyzeTarget(data, env) {
+  const { userStats, targetStats, targetInfo } = data;
+  
+  // Use our combat intelligence engine
+  const analysis = combatIntelligence.generateCombatRecommendation(
+    userStats,
+    targetStats,
+    targetInfo,
+    { fairFightMultiplier: targetInfo.ffMultiplier || 1.0 }
+  );
+  
+  // Store analysis for later reference
+  if (data.userId) {
+    const key = `analysis:${data.userId}:${targetInfo.id}`;
+    await env.TORN_DATA.put(key, JSON.stringify({
+      ...analysis,
+      timestamp: Date.now()
+    }), {
+      expirationTtl: 86400 // Expire after 24 hours
+    });
+  }
+  
+  return analysis;
+}
+
+/**
+ * Scheduled handler (for automated tasks like war alerts)
+ */
+export async function scheduled(event, env, ctx) {
+  // This runs on schedule (configure in wrangler.toml with cron triggers)
+  // Example: Check for upcoming wars and send alerts
+  
+  console.log('Scheduled task running:', new Date().toISOString());
+  
+  // Future implementation:
+  // - Check for wars starting soon
+  // - Send Discord notifications
+  // - Update cached data from Torn API
+  // - Clean up old KV entries
+}
