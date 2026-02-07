@@ -20,7 +20,7 @@
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.63.0"
   },
   "dependencies": {
     "discord-interactions": "^3.4.0"
