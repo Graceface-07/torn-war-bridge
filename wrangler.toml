@@ -1,5 +1,5 @@
-# Cloudflare Workers Configuration
-# This file tells Cloudflare how to deploy your worker
+// Cloudflare Workers Configuration
+//# This file tells Cloudflare how to deploy your worker
 
 name = "torn-advisor"
 main = "src/index.js"
