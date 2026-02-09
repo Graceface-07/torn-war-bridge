@@ -1,7 +1,0 @@
-name = "torn-war-bridge"
-main = "src/index.js"
-compatibility_date = "2024-01-01"
-
-[[kv_namespaces]]
-binding = "ROTATOR"
-id = "7d26ddc573674ba19db3af3951322bf7"
