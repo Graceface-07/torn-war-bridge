@@ -221,111 +221,148 @@ async function fetchFactionRoster(request, env, corsHeaders) {
 // ==========================================
 
 async function analyzeAllTargets(request, env, corsHeaders) {
-  const { 
-    userTornId, 
-    userStatSource, // 'torn' or 'ff'
-    members // array of enemy member objects
-  } = await request.json();
-  
-  // Get user data from KV
-  const userDataJson = await env.ROTATOR.get(`user_${userTornId}`);
-  if (!userDataJson) {
-    return jsonResponse({ error: 'User data not found' }, corsHeaders, 404);
-  }
-  
-  const userData = JSON.parse(userDataJson);
-  const userTotal = userStatSource === 'torn' 
-    ? userData.tornStats.total 
-    : userData.ffStats.total;
-  
-  if (!userTotal) {
-    return jsonResponse({ error: 'User stats not available for selected source' }, corsHeaders, 400);
-  }
-  
-  const targets = [];
-  const BATCH_SIZE = 100; // FF Scouter can handle up to 100
-  
-  // Process in batches
-  for (let i = 0; i < members.length; i += BATCH_SIZE) {
-    const batch = members.slice(i, i + BATCH_SIZE);
-    const batchIds = batch.map(m => m.id).join(',');
+  try {
+    const { 
+      userTornId, 
+      userStatSource, // 'torn' or 'ff'
+      members // array of enemy member objects
+    } = await request.json();
     
-    // Fetch FF Scouter data for batch
-    let ffDataMap = {};
-    try {
-      const ffUrl = `https://ffscouter.com/api/v1/get-stats?key=${FF_SCOUTER_KEY}&targets=${batchIds}&user_id=${userTornId}`;
-      const ffResponse = await fetch(ffUrl);
-      const ffData = await ffResponse.json();
-      
-      // Map FF data by ID
-      batch.forEach((member, idx) => {
-        if (ffData && ffData[idx]) {
-          ffDataMap[member.id] = ffData[idx];
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching FF Scouter batch:', error);
+    console.log('Analyzing targets for user:', userTornId, 'Stat source:', userStatSource, 'Member count:', members?.length);
+    
+    // Get user data from KV
+    const userDataJson = await env.ROTATOR.get(`user_${userTornId}`);
+    if (!userDataJson) {
+      console.error('User data not found in KV');
+      return jsonResponse({ error: 'User data not found' }, corsHeaders, 404);
     }
     
-    // Analyze each target in batch
-    for (const member of batch) {
-      // 1. Check spy database
-      const spyKey = `spy_${member.id}`;
-      const spyData = await env.ROTATOR.get(spyKey, { type: 'json' });
+    const userData = JSON.parse(userDataJson);
+    const userTotal = userStatSource === 'torn' 
+      ? userData.tornStats?.total 
+      : userData.ffStats?.total;
+    
+    console.log('User total stats:', userTotal);
+    
+    if (!userTotal) {
+      return jsonResponse({ error: 'User stats not available for selected source' }, corsHeaders, 400);
+    }
+    
+    const targets = [];
+    const BATCH_SIZE = 100;
+    
+    // Process in batches
+    for (let i = 0; i < members.length; i += BATCH_SIZE) {
+      const batch = members.slice(i, i + BATCH_SIZE);
+      const batchIds = batch.map(m => m.id).join(',');
       
-      // 2. Get FF Scouter data
-      const ffData = ffDataMap[member.id] || { fair_fight: 1.0, bs_estimate: 0 };
+      console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1}, IDs:`, batchIds);
       
-      // 3. Determine enemy stats (spy takes priority)
-      let enemyTotal, dataSource;
-      if (spyData && spyData.stats) {
-        enemyTotal = spyData.stats.strength + spyData.stats.defense + 
-                     spyData.stats.speed + spyData.stats.dexterity;
-        dataSource = 'spy';
-      } else {
-        enemyTotal = Number(ffData.bs_estimate) || 100000000; // Default if missing
-        dataSource = 'ffscouter';
+      // Fetch FF Scouter data for batch
+      let ffDataMap = {};
+      try {
+        const ffUrl = `https://ffscouter.com/api/v1/get-stats?key=${FF_SCOUTER_KEY}&targets=${batchIds}&user_id=${userTornId}`;
+        const ffResponse = await fetch(ffUrl);
+        const ffData = await ffResponse.json();
+        
+        console.log('FF Scouter response:', ffData);
+        
+        // Map FF data by ID
+        if (Array.isArray(ffData)) {
+          batch.forEach((member, idx) => {
+            if (ffData[idx]) {
+              ffDataMap[member.id] = ffData[idx];
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching FF Scouter batch:', error);
       }
       
-      const fairFight = Number(ffData.fair_fight) || 1.0;
-      
-      // 4. Calculate analysis
-      const analysis = calculateCombatAnalysis(userTotal, enemyTotal, fairFight);
-      
-      targets.push({
-        uid: member.id,
-        name: member.name,
-        level: member.level,
-        status: member.status,
-        fairFight: fairFight,
-        enemyTotal: enemyTotal,
-        dataSource: dataSource,
-        ...analysis
-      });
+      // Analyze each target in batch
+      for (const member of batch) {
+        try {
+          // 1. Check spy database
+          const spyKey = `spy_${member.id}`;
+          let spyData = null;
+          
+          try {
+            const spyJson = await env.ROTATOR.get(spyKey);
+            if (spyJson) {
+              spyData = JSON.parse(spyJson);
+            }
+          } catch (spyError) {
+            console.log(`No spy data for ${member.id}`);
+          }
+          
+          // 2. Get FF Scouter data
+          const ffData = ffDataMap[member.id] || { fair_fight: 1.0, bs_estimate: 0 };
+          
+          // 3. Determine enemy stats (spy takes priority)
+          let enemyTotal, dataSource;
+          if (spyData && spyData.stats) {
+            enemyTotal = (spyData.stats.strength || 0) + (spyData.stats.defense || 0) + 
+                         (spyData.stats.speed || 0) + (spyData.stats.dexterity || 0);
+            dataSource = 'spy';
+          } else {
+            enemyTotal = Number(ffData.bs_estimate) || 100000000;
+            dataSource = 'ffscouter';
+          }
+          
+          const fairFight = Number(ffData.fair_fight) || 1.0;
+          
+          // 4. Calculate analysis
+          const analysis = calculateCombatAnalysis(userTotal, enemyTotal, fairFight);
+          
+          targets.push({
+            uid: member.id,
+            name: member.name,
+            level: member.level,
+            status: member.status?.state || 'unknown',
+            fairFight: fairFight,
+            enemyTotal: enemyTotal,
+            dataSource: dataSource,
+            ...analysis
+          });
+        } catch (memberError) {
+          console.error(`Error analyzing member ${member.id}:`, memberError);
+          // Continue with next member instead of failing entire batch
+        }
+      }
     }
+    
+    console.log('Total targets analyzed:', targets.length);
+    
+    // Categorize
+    const categorized = {
+      green: targets.filter(t => t.tier === 'green'),
+      amber: targets.filter(t => t.tier === 'amber'),
+      blue: targets.filter(t => t.tier === 'blue'),
+      red: targets.filter(t => t.tier === 'red')
+    };
+    
+    return jsonResponse({
+      success: true,
+      userTotal: userTotal,
+      userStatSource: userStatSource,
+      totalTargets: targets.length,
+      categories: {
+        green: categorized.green.length,
+        amber: categorized.amber.length,
+        blue: categorized.blue.length,
+        red: categorized.red.length
+      },
+      targets: targets
+    }, corsHeaders);
+    
+  } catch (outerError) {
+    console.error('Fatal error in analyzeAllTargets:', outerError);
+    return jsonResponse({ 
+      error: 'Analysis failed',
+      message: outerError.message,
+      stack: outerError.stack
+    }, corsHeaders, 500);
   }
-  
-  // Categorize
-  const categorized = {
-    green: targets.filter(t => t.tier === 'green'),
-    amber: targets.filter(t => t.tier === 'amber'),
-    blue: targets.filter(t => t.tier === 'blue'),
-    red: targets.filter(t => t.tier === 'red')
-  };
-  
-  return jsonResponse({
-    success: true,
-    userTotal: userTotal,
-    userStatSource: userStatSource,
-    totalTargets: targets.length,
-    categories: {
-      green: categorized.green.length,
-      amber: categorized.amber.length,
-      blue: categorized.blue.length,
-      red: categorized.red.length
-    },
-    targets: targets
-  }, corsHeaders);
 }
 
 // ==========================================
