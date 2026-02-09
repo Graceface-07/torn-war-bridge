@@ -1,8 +1,11 @@
 /**
- * TORN TACTICAL ADVISOR - Correct Flow
- * User enters: Enemy Faction ID + Their User ID
- * Option to choose which stat source for analysis
+ * TORN TACTICAL ADVISOR - Phase 1 Complete
+ * Automatic battlefield intelligence system
  */
+
+// TEMP API KEYS FOR TESTING (48 hour expiry)
+const TORN_API_KEY = 'CZP2D2ZnbXWsYiDT';
+const FF_SCOUTER_KEY = 'rwLgZTyqgWDxhoCx';
 
 export default {
   async fetch(request, env) {
@@ -35,22 +38,32 @@ export default {
         });
       }
       
-      // API: Initialize scan (fetch user + faction data)
+      // API: Initialize full scan
       if (url.pathname === '/api/initialize' && request.method === 'POST') {
         return await initializeScan(request, env, corsHeaders);
       }
       
-      // API: Generate full report with stat choice
-      if (url.pathname === '/api/generate-report' && request.method === 'POST') {
-        return await generateReport(request, env, corsHeaders);
+      // API: Fetch user stats
+      if (url.pathname === '/api/fetch-user' && request.method === 'POST') {
+        return await fetchUserStats(request, env, corsHeaders);
+      }
+      
+      // API: Fetch faction roster
+      if (url.pathname === '/api/fetch-faction' && request.method === 'POST') {
+        return await fetchFactionRoster(request, env, corsHeaders);
+      }
+      
+      // API: Analyze all targets
+      if (url.pathname === '/api/analyze-all' && request.method === 'POST') {
+        return await analyzeAllTargets(request, env, corsHeaders);
       }
       
       // HEALTH
       if (url.pathname === '/health') {
         return jsonResponse({ 
           status: 'healthy',
-          version: '0.3.0',
-          features: ['tactical-advisor', 'spy-integration', 'ff-scouter']
+          version: '1.0.0',
+          phase: 'Phase 1 - Tactical Dashboard'
         }, corsHeaders);
       }
       
@@ -77,141 +90,315 @@ async function initializeScan(request, env, corsHeaders) {
     return jsonResponse({ error: 'Missing userTornId or enemyFactionId' }, corsHeaders, 400);
   }
   
-  // TODO: Fetch user data from Torn API
-  // For now, return mock structure
-  const userData = {
-    tornId: userTornId,
-    name: "OPERATOR",
-    tornStats: {
-      total: 2000000000, // From Torn API (includes merits/education)
-      strength: 500000000,
-      defense: 480000000,
-      speed: 520000000,
-      dexterity: 500000000
-    },
-    ffScouterStats: {
-      total: 1950000000, // From FF Scouter estimate
-      strength: 490000000,
-      defense: 475000000,
-      speed: 510000000,
-      dexterity: 475000000
-    }
-  };
-  
-  // TODO: Fetch enemy faction roster from Torn API
-  const factionData = {
-    factionId: enemyFactionId,
-    name: "Enemy Faction",
-    members: [
-      { id: "123456", name: "Enemy1" },
-      { id: "789012", name: "Enemy2" },
-      { id: "345678", name: "Enemy3" }
-    ]
+  // Store keys temporarily (in production, encrypt these)
+  const sessionData = {
+    userTornId,
+    enemyFactionId,
+    tornApiKey: tornApiKey || 'DEMO_KEY',
+    ffScouterKey: ffScouterKey || 'DEMO_KEY',
+    timestamp: Date.now()
   };
   
   return jsonResponse({
     success: true,
-    userData,
-    factionData
+    session: sessionData,
+    message: 'Session initialized. Ready to fetch data.'
   }, corsHeaders);
 }
 
 // ==========================================
-// GENERATE REPORT
+// FETCH USER STATS
 // ==========================================
 
-async function generateReport(request, env, corsHeaders) {
-  const { 
-    userTornId, 
-    userStatSource, // 'torn' or 'ffscouter'
-    enemyFactionId,
-    enemies // array of enemy IDs
-  } = await request.json();
+async function fetchUserStats(request, env, corsHeaders) {
+  const { userTornId } = await request.json();
   
-  if (!userTornId || !userStatSource || !enemies) {
-    return jsonResponse({ error: 'Missing required fields' }, corsHeaders, 400);
+  // Fetch from Torn API
+  let tornStats = null;
+  try {
+    const tornUrl = `https://api.torn.com/user/${userTornId}?selections=profile,battlestats&key=${TORN_API_KEY}`;
+    const tornResponse = await fetch(tornUrl);
+    const tornData = await tornResponse.json();
+    
+    if (tornData.error) {
+      console.error('Torn API error:', tornData.error);
+    } else {
+      tornStats = {
+        name: tornData.name || 'OPERATOR',
+        total: Number(tornData.total) || 0,
+        strength: tornData.strength || 0,
+        defense: tornData.defense || 0,
+        speed: tornData.speed || 0,
+        dexterity: tornData.dexterity || 0
+      };
+    }
+  } catch (error) {
+    console.error('Error fetching Torn stats:', error);
   }
   
-  // Get user stats (stored from initialize)
-  // For now using mock data
-  const userStats = userStatSource === 'torn' 
-    ? { total: 2000000000 }
-    : { total: 1950000000 };
-  
-  const targets = [];
-  
-  // For each enemy
-  for (const enemyId of enemies) {
-    // 1. Check spy database (key: spy_{uid})
-    const spyKey = `spy_${enemyId}`;
-    const spyData = await env.ROTATOR.get(spyKey, { type: 'json' });
+  // Fetch from FF Scouter
+  let ffStats = null;
+  try {
+    const ffUrl = `https://ffscouter.com/api/v1/get-stats?key=${FF_SCOUTER_KEY}&targets=${userTornId}&user_id=${userTornId}`;
+    const ffResponse = await fetch(ffUrl);
+    const ffData = await ffResponse.json();
     
-    // 2. Get FF Scouter data (ALWAYS - for FF multiplier)
-    // TODO: Call FF Scouter API
-    const ffData = {
-      uid: enemyId,
-      fairFight: 2.5,
-      estimatedTotal: 800000000
+    if (ffData && ffData.length > 0) {
+      const userData = ffData[0];
+      ffStats = {
+        total: Number(userData.bs_estimate) || 0,
+        fairFight: Number(userData.fair_fight) || 1.0
+      };
+    }
+  } catch (error) {
+    console.error('Error fetching FF Scouter stats:', error);
+  }
+  
+  // Store user data in KV
+  if (tornStats || ffStats) {
+    const userData = {
+      tornId: userTornId,
+      tornStats: tornStats,
+      ffStats: ffStats,
+      lastUpdated: Date.now()
     };
     
-    // 3. Choose enemy stats (spy data if exists, else FF Scouter)
-    const enemyStats = spyData 
-      ? {
-          total: spyData.stats.strength + spyData.stats.defense + spyData.stats.speed + spyData.stats.dexterity,
-          source: 'spy'
-        }
-      : {
-          total: ffData.estimatedTotal,
-          source: 'ffscouter'
-        };
-    
-    // 4. Calculate analysis
-    const statRatio = (userStats.total * ffData.fairFight) / enemyStats.total;
-    
-    let winProb, tier;
-    if (statRatio >= 2.0) {
-      winProb = 0.95;
-      tier = 'green';
-    } else if (statRatio >= 1.5) {
-      winProb = 0.85;
-      tier = 'amber';
-    } else if (statRatio >= 1.0) {
-      winProb = 0.60;
-      tier = 'blue';
-    } else {
-      winProb = 0.30;
-      tier = 'red';
-    }
-    
-    targets.push({
-      uid: enemyId,
-      name: `Enemy${enemyId}`,
-      fairFight: ffData.fairFight,
-      enemyTotal: enemyStats.total,
-      enemyStatsSource: enemyStats.source,
-      winProbability: winProb,
-      statRatio: statRatio,
-      tier: tier,
-      verdict: winProb >= 0.85 ? 'RECOMMENDED' : winProb >= 0.60 ? 'ACCEPTABLE' : winProb >= 0.40 ? 'RISKY' : 'AVOID'
-    });
+    await env.ROTATOR.put(`user_${userTornId}`, JSON.stringify(userData));
   }
   
-  // Categorize by tier
+  return jsonResponse({
+    success: true,
+    tornStats,
+    ffStats
+  }, corsHeaders);
+}
+
+// ==========================================
+// FETCH FACTION ROSTER
+// ==========================================
+
+async function fetchFactionRoster(request, env, corsHeaders) {
+  const { enemyFactionId } = await request.json();
+  
+  try {
+    const url = `https://api.torn.com/faction/${enemyFactionId}?selections=basic&key=${TORN_API_KEY}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.error) {
+      return jsonResponse({ 
+        error: 'Torn API Error', 
+        details: data.error 
+      }, corsHeaders, 400);
+    }
+    
+    // Extract member IDs and names
+    const members = Object.keys(data.members || {}).map(id => ({
+      id: id,
+      name: data.members[id].name,
+      level: data.members[id].level,
+      status: data.members[id].status
+    }));
+    
+    return jsonResponse({
+      success: true,
+      factionName: data.name,
+      memberCount: members.length,
+      members: members
+    }, corsHeaders);
+    
+  } catch (error) {
+    console.error('Error fetching faction:', error);
+    return jsonResponse({ 
+      error: 'Failed to fetch faction data',
+      details: error.message
+    }, corsHeaders, 500);
+  }
+}
+
+// ==========================================
+// ANALYZE ALL TARGETS
+// ==========================================
+
+async function analyzeAllTargets(request, env, corsHeaders) {
+  const { 
+    userTornId, 
+    userStatSource, // 'torn' or 'ff'
+    members // array of enemy member objects
+  } = await request.json();
+  
+  // Get user data from KV
+  const userDataJson = await env.ROTATOR.get(`user_${userTornId}`);
+  if (!userDataJson) {
+    return jsonResponse({ error: 'User data not found' }, corsHeaders, 404);
+  }
+  
+  const userData = JSON.parse(userDataJson);
+  const userTotal = userStatSource === 'torn' 
+    ? userData.tornStats.total 
+    : userData.ffStats.total;
+  
+  if (!userTotal) {
+    return jsonResponse({ error: 'User stats not available for selected source' }, corsHeaders, 400);
+  }
+  
+  const targets = [];
+  const BATCH_SIZE = 100; // FF Scouter can handle up to 100
+  
+  // Process in batches
+  for (let i = 0; i < members.length; i += BATCH_SIZE) {
+    const batch = members.slice(i, i + BATCH_SIZE);
+    const batchIds = batch.map(m => m.id).join(',');
+    
+    // Fetch FF Scouter data for batch
+    let ffDataMap = {};
+    try {
+      const ffUrl = `https://ffscouter.com/api/v1/get-stats?key=${FF_SCOUTER_KEY}&targets=${batchIds}&user_id=${userTornId}`;
+      const ffResponse = await fetch(ffUrl);
+      const ffData = await ffResponse.json();
+      
+      // Map FF data by ID
+      batch.forEach((member, idx) => {
+        if (ffData && ffData[idx]) {
+          ffDataMap[member.id] = ffData[idx];
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching FF Scouter batch:', error);
+    }
+    
+    // Analyze each target in batch
+    for (const member of batch) {
+      // 1. Check spy database
+      const spyKey = `spy_${member.id}`;
+      const spyData = await env.ROTATOR.get(spyKey, { type: 'json' });
+      
+      // 2. Get FF Scouter data
+      const ffData = ffDataMap[member.id] || { fair_fight: 1.0, bs_estimate: 0 };
+      
+      // 3. Determine enemy stats (spy takes priority)
+      let enemyTotal, dataSource;
+      if (spyData && spyData.stats) {
+        enemyTotal = spyData.stats.strength + spyData.stats.defense + 
+                     spyData.stats.speed + spyData.stats.dexterity;
+        dataSource = 'spy';
+      } else {
+        enemyTotal = Number(ffData.bs_estimate) || 100000000; // Default if missing
+        dataSource = 'ffscouter';
+      }
+      
+      const fairFight = Number(ffData.fair_fight) || 1.0;
+      
+      // 4. Calculate analysis
+      const analysis = calculateCombatAnalysis(userTotal, enemyTotal, fairFight);
+      
+      targets.push({
+        uid: member.id,
+        name: member.name,
+        level: member.level,
+        status: member.status,
+        fairFight: fairFight,
+        enemyTotal: enemyTotal,
+        dataSource: dataSource,
+        ...analysis
+      });
+    }
+  }
+  
+  // Categorize
   const categorized = {
-    amber: targets.filter(t => t.tier === 'amber'),
     green: targets.filter(t => t.tier === 'green'),
+    amber: targets.filter(t => t.tier === 'amber'),
     blue: targets.filter(t => t.tier === 'blue'),
     red: targets.filter(t => t.tier === 'red')
   };
   
   return jsonResponse({
     success: true,
-    userStatSource,
-    userTotal: userStats.total,
+    userTotal: userTotal,
+    userStatSource: userStatSource,
     totalTargets: targets.length,
-    categories: categorized,
-    allTargets: targets
+    categories: {
+      green: categorized.green.length,
+      amber: categorized.amber.length,
+      blue: categorized.blue.length,
+      red: categorized.red.length
+    },
+    targets: targets
   }, corsHeaders);
+}
+
+// ==========================================
+// COMBAT ANALYSIS CALCULATOR
+// ==========================================
+
+function calculateCombatAnalysis(userTotal, enemyTotal, fairFight) {
+  // Effective stats with FF multiplier
+  const effectiveUserStats = userTotal * fairFight;
+  const statRatio = effectiveUserStats / enemyTotal;
+  
+  // Win probability
+  let winProb, confidence;
+  if (statRatio >= 2.0) {
+    winProb = 0.95;
+    confidence = 'high';
+  } else if (statRatio >= 1.5) {
+    winProb = 0.85;
+    confidence = 'high';
+  } else if (statRatio >= 1.2) {
+    winProb = 0.70;
+    confidence = 'medium';
+  } else if (statRatio >= 1.0) {
+    winProb = 0.55;
+    confidence = 'medium';
+  } else if (statRatio >= 0.8) {
+    winProb = 0.35;
+    confidence = 'low';
+  } else {
+    winProb = 0.15;
+    confidence = 'low';
+  }
+  
+  // Tier based on FF and win probability
+  let tier;
+  if (fairFight >= 4.7 && winProb >= 0.85) {
+    tier = 'green'; // Safe
+  } else if (fairFight >= 3.0 && winProb >= 0.70) {
+    tier = 'amber'; // Prime
+  } else if (fairFight >= 2.0 && winProb >= 0.40) {
+    tier = 'blue'; // Risky
+  } else {
+    tier = 'red'; // Avoid
+  }
+  
+  // Verdict
+  let verdict;
+  if (winProb >= 0.85) verdict = 'RECOMMENDED';
+  else if (winProb >= 0.60) verdict = 'ACCEPTABLE';
+  else if (winProb >= 0.40) verdict = 'RISKY';
+  else verdict = 'AVOID';
+  
+  // Reasoning
+  const advantage = ((statRatio - 1) * 100).toFixed(1);
+  let reasoning;
+  
+  if (statRatio >= 1.5) {
+    reasoning = `Strong advantage: Your ${(effectiveUserStats/1e9).toFixed(2)}B effective stats (${(userTotal/1e9).toFixed(2)}B × ${fairFight.toFixed(2)}x FF) vs their ${(enemyTotal/1e9).toFixed(2)}B gives you ${advantage}% superiority. ${(winProb*100).toFixed(0)}% win chance with minimal risk.`;
+  } else if (statRatio >= 1.0) {
+    reasoning = `Moderate edge: ${advantage}% stat advantage with ${fairFight.toFixed(2)}x FF multiplier. ${(winProb*100).toFixed(0)}% win probability - good target but use boosters for safety.`;
+  } else {
+    const disadvantage = ((1 - statRatio) * 100).toFixed(1);
+    reasoning = `Disadvantage: You're ${disadvantage}% weaker even with ${fairFight.toFixed(2)}x FF. Only ${(winProb*100).toFixed(0)}% win chance - high hospitalization risk. Find easier targets.`;
+  }
+  
+  return {
+    winProbability: winProb,
+    confidence: confidence,
+    statRatio: statRatio,
+    tier: tier,
+    verdict: verdict,
+    reasoning: reasoning
+  };
 }
 
 // ==========================================
@@ -259,107 +446,124 @@ function getUI() {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Torn Tactical Advisor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Courier New', monospace;
-      background: linear-gradient(135deg, #0a0a0a 0%, #1a0a0f 100%);
-      color: #fff;
-      min-height: 100vh;
-      padding: 20px;
+    :root {
+      --green: #00ff9c;
+      --amber: #f6da00;
+      --blue: #009fff;
+      --red: #ff3333;
+      --bg: #000;
+      --panel: #1c1c1c;
+      --border: #333;
     }
-    .container { max-width: 900px; margin: 0 auto; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: #eee;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
     h1 {
-      font-size: 42px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 36px;
       text-align: center;
-      background: linear-gradient(135deg, #ff2b2b, #ff9d00, #00d2ff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: var(--blue);
       letter-spacing: 4px;
-      margin-bottom: 40px;
-      text-transform: uppercase;
+      margin-bottom: 30px;
     }
     .card {
-      background: rgba(26, 26, 26, 0.8);
-      border-radius: 16px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 25px;
       padding: 30px;
-      margin-bottom: 30px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 20px;
     }
-    .card h2 { color: #ff9d00; font-size: 22px; margin-bottom: 20px; }
+    .card h2 {
+      font-family: 'Orbitron', sans-serif;
+      color: var(--amber);
+      font-size: 18px;
+      margin-bottom: 20px;
+      letter-spacing: 2px;
+    }
     input, button, select {
-      font-family: 'Courier New', monospace;
+      font-family: 'Inter', sans-serif;
       font-size: 14px;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      background: rgba(0, 0, 0, 0.4);
+      padding: 14px;
+      border-radius: 25px;
+      border: 1px solid var(--border);
+      background: #000;
       color: #fff;
       width: 100%;
       margin-bottom: 12px;
     }
     button {
-      background: linear-gradient(135deg, #ff2b2b, #ff6b2b);
-      border: none;
-      cursor: pointer;
+      background: var(--blue);
+      color: #000;
       font-weight: 600;
-      letter-spacing: 1px;
+      cursor: pointer;
+      border: none;
       text-transform: uppercase;
+      letter-spacing: 2px;
     }
-    button:hover { transform: translateY(-2px); }
-    .success { color: #00ff9c; }
-    .warning { color: #ff9d00; }
-    .danger { color: #ff2b2b; }
-    .info { color: #00d2ff; }
-    .hidden { display: none; }
+    button:hover { opacity: 0.8; }
+    .hidden { display: none !important; }
+    .loading { color: var(--blue); text-align: center; padding: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
     .target-card {
-      background: rgba(0,0,0,0.3);
-      padding: 15px;
-      border-radius: 12px;
-      margin-bottom: 10px;
-      border-left: 4px solid;
+      background: #111;
+      padding: 20px;
+      border-radius: 20px;
+      border-left: 5px solid;
+      cursor: pointer;
     }
-    .target-card.green { border-left-color: #00ff9c; }
-    .target-card.amber { border-left-color: #ff9d00; }
-    .target-card.blue { border-left-color: #00d2ff; }
-    .target-card.red { border-left-color: #ff2b2b; }
+    .target-card.green { border-left-color: var(--green); }
+    .target-card.amber { border-left-color: var(--amber); }
+    .target-card.blue { border-left-color: var(--blue); }
+    .target-card.red { border-left-color: var(--red); }
+    .target-card:hover { background: #1a1a1a; }
+    .label { font-size: 10px; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-row { display: flex; justify-content: space-between; margin: 10px 0; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Tactical Advisor</h1>
+    <h1>TACTICAL ADVISOR</h1>
     
-    <!-- Setup Screen -->
-    <div id="setupScreen" class="card">
-      <h2>🎯 Initialize Scan</h2>
-      
-      <input type="number" id="userTornId" placeholder="Your Torn User ID (e.g., 2702970)">
-      <input type="number" id="enemyFactionId" placeholder="Enemy Faction ID (e.g., 42505)">
-      
+    <!-- Initialize Screen -->
+    <div id="initScreen" class="card">
+      <h2>🎯 INITIALIZE BATTLEFIELD SCAN</h2>
+      <input type="number" id="userTornId" placeholder="Your Torn User ID (e.g., 2702970)" value="2702970">
+      <input type="number" id="enemyFactionId" placeholder="Enemy Faction ID (e.g., 42505)" value="42505">
+      <small style="color: #888; display: block; margin: 10px 0;">Using temp API keys (expires in 48hrs)</small>
       <button onclick="initialize()">INITIALIZE SCAN</button>
-      <div id="initResult"></div>
+      <div id="initStatus"></div>
     </div>
     
-    <!-- Dashboard (after initialize) -->
+    <!-- Dashboard -->
     <div id="dashboard" class="hidden">
       <div class="card">
-        <h2>👤 Your Data Loaded</h2>
-        <p><strong>Torn Stats Total:</strong> <span id="tornTotal" class="success">-</span></p>
-        <p><strong>FF Scouter Total:</strong> <span id="ffTotal" class="info">-</span></p>
-        <p style="margin-top: 15px; color: #888; font-size: 12px;">Both stats fetched. Choose which to use for analysis.</p>
+        <h2>👤 OPERATOR STATUS</h2>
+        <div class="stat-row">
+          <div><span class="label">Name</span><div id="userName">-</div></div>
+          <div><span class="label">Torn Stats</span><div id="tornTotal" style="color: var(--green);">-</div></div>
+          <div><span class="label">FF Stats</span><div id="ffTotal" style="color: var(--blue);">-</div></div>
+        </div>
+        <div style="margin-top: 20px;">
+          <span class="label">Stat Source for Analysis:</span>
+          <select id="statSource" onchange="regenerateAnalysis()">
+            <option value="torn">Torn Stats (includes merits/education)</option>
+            <option value="ff">FF Scouter Stats</option>
+          </select>
+        </div>
       </div>
       
       <div class="card">
-        <h2>📊 Generate Report</h2>
-        
-        <label style="display: block; margin-bottom: 10px; color: #ff9d00;">Choose Stat Source:</label>
-        <select id="statSource">
-          <option value="torn">Torn Stats (includes merits/education)</option>
-          <option value="ffscouter">FF Scouter Stats</option>
-        </select>
-        
-        <button onclick="generateReport()">GENERATE FULL REPORT</button>
-        <div id="reportResult"></div>
+        <h2>📊 TARGET ANALYSIS</h2>
+        <div id="categoryBreakdown" style="display: flex; gap: 20px; margin-bottom: 20px;"></div>
+        <div id="targetGrid" class="grid"></div>
       </div>
     </div>
   </div>
@@ -368,8 +572,11 @@ function getUI() {
     let SESSION = {
       userTornId: null,
       enemyFactionId: null,
+      tornApiKey: null,
+      ffScouterKey: null,
       userData: null,
-      factionData: null
+      factionData: null,
+      targets: []
     };
     
     async function initialize() {
@@ -377,116 +584,146 @@ function getUI() {
       const enemyFactionId = document.getElementById('enemyFactionId').value;
       
       if (!userTornId || !enemyFactionId) {
-        alert('Please enter both IDs');
+        alert('Please enter both User ID and Faction ID');
         return;
       }
       
-      document.getElementById('initResult').innerHTML = '<p class="info">🔄 Fetching data...</p>';
+      SESSION.userTornId = userTornId;
+      SESSION.enemyFactionId = enemyFactionId;
       
-      try {
-        const response = await fetch('/api/initialize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            userTornId, 
-            enemyFactionId,
-            tornApiKey: 'mock', // TODO: User provides
-            ffScouterKey: 'mock' // TODO: User provides
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          SESSION.userTornId = userTornId;
-          SESSION.enemyFactionId = enemyFactionId;
-          SESSION.userData = data.userData;
-          SESSION.factionData = data.factionData;
-          
-          // Show dashboard
-          document.getElementById('setupScreen').classList.add('hidden');
-          document.getElementById('dashboard').classList.remove('hidden');
-          
-          // Display stats
-          document.getElementById('tornTotal').textContent = (data.userData.tornStats.total / 1000000000).toFixed(2) + 'B';
-          document.getElementById('ffTotal').textContent = (data.userData.ffScouterStats.total / 1000000000).toFixed(2) + 'B';
-        } else {
-          document.getElementById('initResult').innerHTML = \`<p class="danger">❌ \${data.error}</p>\`;
-        }
-      } catch (error) {
-        document.getElementById('initResult').innerHTML = \`<p class="danger">❌ \${error.message}</p>\`;
-      }
-    }
-    
-    async function generateReport() {
-      const statSource = document.getElementById('statSource').value;
+      document.getElementById('initStatus').innerHTML = '<div class="loading">⏳ Initializing...</div>';
       
-      if (!SESSION.factionData) {
-        alert('Please initialize scan first');
+      // Step 1: Fetch user stats
+      document.getElementById('initStatus').innerHTML = '<div class="loading">⏳ Fetching your stats...</div>';
+      const userResponse = await fetch('/api/fetch-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userTornId })
+      });
+      const userData = await userResponse.json();
+      SESSION.userData = userData;
+      
+      if (!userData.success) {
+        alert('Failed to fetch user stats: ' + (userData.error || 'Unknown error'));
+        document.getElementById('initStatus').innerHTML = '';
         return;
       }
       
-      document.getElementById('reportResult').innerHTML = '<p class="info">🔄 Analyzing targets...</p>';
+      // Step 2: Fetch faction roster
+      document.getElementById('initStatus').innerHTML = '<div class="loading">⏳ Fetching enemy faction...</div>';
+      const factionResponse = await fetch('/api/fetch-faction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enemyFactionId })
+      });
+      const factionData = await factionResponse.json();
+      SESSION.factionData = factionData;
       
-      try {
-        const enemyIds = SESSION.factionData.members.map(m => m.id);
-        
-        const response = await fetch('/api/generate-report', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userTornId: SESSION.userTornId,
-            userStatSource: statSource,
-            enemyFactionId: SESSION.enemyFactionId,
-            enemies: enemyIds
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          displayReport(data);
-        } else {
-          document.getElementById('reportResult').innerHTML = \`<p class="danger">❌ \${data.error}</p>\`;
-        }
-      } catch (error) {
-        document.getElementById('reportResult').innerHTML = \`<p class="danger">❌ \${error.message}</p>\`;
+      if (!factionData.success) {
+        alert('Failed to fetch faction data: ' + (factionData.error || 'Unknown error'));
+        document.getElementById('initStatus').innerHTML = '';
+        return;
       }
+      
+      // Step 3: Analyze all targets
+      document.getElementById('initStatus').innerHTML = \`<div class="loading">⏳ Analyzing \${factionData.memberCount} targets...</div>\`;
+      await analyzeTargets();
     }
     
-    function displayReport(data) {
-      let html = \`
-        <div style="margin-top: 20px; padding: 20px; background: rgba(0,210,255,0.1); border-radius: 12px;">
-          <h3 style="color: #00d2ff;">Report Generated</h3>
-          <p><strong>Using:</strong> \${data.userStatSource === 'torn' ? 'Torn Stats' : 'FF Scouter Stats'}</p>
-          <p><strong>Your Total:</strong> \${(data.userTotal / 1000000000).toFixed(2)}B</p>
-          <p><strong>Total Targets:</strong> \${data.totalTargets}</p>
-        </div>
-        
-        <div style="margin-top: 20px;">
-          <h3 style="color: #00ff9c;">Targets:</h3>
-      \`;
-      
-      data.allTargets.forEach(target => {
-        html += \`
-          <div class="target-card \${target.tier}">
-            <div style="display: flex; justify-content: space-between;">
-              <div>
-                <strong>\${target.name}</strong><br>
-                <small>FF: \${target.fairFight.toFixed(2)}x | Win: \${(target.winProbability * 100).toFixed(0)}%</small>
-              </div>
-              <div style="text-align: right;">
-                <strong class="\${target.tier}">\${target.verdict}</strong><br>
-                <small>Source: \${target.enemyStatsSource}</small>
-              </div>
-            </div>
-          </div>
-        \`;
+    async function analyzeTargets() {
+      const response = await fetch('/api/analyze-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userTornId: SESSION.userTornId,
+          userStatSource: document.getElementById('statSource').value,
+          members: SESSION.factionData.members
+        })
       });
       
-      html += '</div>';
+      const data = await response.json();
       
-      document.getElementById('reportResult').innerHTML = html;
+      if (data.success) {
+        SESSION.targets = data.targets;
+        showDashboard();
+      } else {
+        alert('Analysis failed: ' + data.error);
+      }
+    }
+    
+    function showDashboard() {
+      document.getElementById('initScreen').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      
+      // Display user stats
+      document.getElementById('userName').textContent = SESSION.userData.tornStats?.name || 'OPERATOR';
+      document.getElementById('tornTotal').textContent = formatStats(SESSION.userData.tornStats?.total);
+      document.getElementById('ffTotal').textContent = formatStats(SESSION.userData.ffStats?.total);
+      
+      // Display category breakdown
+      const categories = { green: 0, amber: 0, blue: 0, red: 0 };
+      SESSION.targets.forEach(t => categories[t.tier]++);
+      
+      document.getElementById('categoryBreakdown').innerHTML = \`
+        <div><span class="label">🟢 Safe</span><div style="color: var(--green); font-size: 24px; font-weight: 700;">\${categories.green}</div></div>
+        <div><span class="label">🟠 Prime</span><div style="color: var(--amber); font-size: 24px; font-weight: 700;">\${categories.amber}</div></div>
+        <div><span class="label">🔵 Risky</span><div style="color: var(--blue); font-size: 24px; font-weight: 700;">\${categories.blue}</div></div>
+        <div><span class="label">🔴 Avoid</span><div style="color: var(--red); font-size: 24px; font-weight: 700;">\${categories.red}</div></div>
+      \`;
+      
+      // Display target cards
+      displayTargets();
+    }
+    
+    function displayTargets() {
+      const grid = document.getElementById('targetGrid');
+      grid.innerHTML = '';
+      
+      SESSION.targets.forEach(target => {
+        const card = document.createElement('div');
+        card.className = \`target-card \${target.tier}\`;
+        card.innerHTML = \`
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <div style="font-weight: 700; font-size: 16px;">\${target.name}</div>
+            <div style="color: var(--\${target.tier}); font-weight: 700;">\${target.fairFight.toFixed(2)}x</div>
+          </div>
+          <div class="stat-row">
+            <div><span class="label">Win Chance</span><div>\${(target.winProbability * 100).toFixed(0)}%</div></div>
+            <div><span class="label">Verdict</span><div style="color: var(--\${target.tier});">\${target.verdict}</div></div>
+          </div>
+          <div><span class="label">Source</span><small>\${target.dataSource}</small></div>
+        \`;
+        card.onclick = () => showDetail(target);
+        grid.appendChild(card);
+      });
+    }
+    
+    function showDetail(target) {
+      alert(\`
+\${target.name}
+
+Win Probability: \${(target.winProbability * 100).toFixed(0)}%
+Fair Fight: \${target.fairFight.toFixed(2)}x
+Verdict: \${target.verdict}
+Data Source: \${target.dataSource}
+
+Analysis:
+\${target.reasoning}
+
+Attack: https://www.torn.com/loader.php?sid=attack&user2ID=\${target.uid}
+      \`);
+    }
+    
+    async function regenerateAnalysis() {
+      document.getElementById('targetGrid').innerHTML = '<div class="loading">⏳ Recalculating...</div>';
+      await analyzeTargets();
+    }
+    
+    function formatStats(num) {
+      if (!num) return '-';
+      if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+      if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+      return num.toLocaleString();
     }
   </script>
 </body>

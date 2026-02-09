@@ -1,478 +1,525 @@
 # TORN TACTICAL ADVISOR - Project Master Document
 
-**Last Updated:** 2026-02-07  
-**Status:** Phase 1 - Web Prototype Development  
-**Version:** 0.1.0
+**Last Updated:** 2026-02-08  
+**Status:** Phase 1 - Building Data Import & Tactical Dashboard  
+**Version:** 0.3.0
 
 ---
 
 ## 🎯 PROJECT VISION
 
-An intelligent combat advisor for Torn City that gives players **smart, actionable advice** - not just data dumps. Acts like an expert coach analyzing their performance, recommending optimal strategies, and helping them improve at PvP combat and faction wars.
+An intelligent **TACTICAL ADVISOR** for Torn City faction wars that acts as your combat coach. It doesn't just show you data - it **analyzes the entire battlefield automatically**, categorizes targets by difficulty, and teaches you WHY each recommendation works.
 
 ### Core Philosophy:
-- **"Here's what to do and WHY"** - not just "here's the data"
-- **Personalized challenges** based on player performance
-- **Smart predictions** for faction wars using FF Scouter data
-- **Tactical recommendations** for each combat scenario
-- **Performance coaching** that tracks improvement over time
+- **"Here's what to do and WHY"** - Educational approach, not just data dumps
+- **Automatic Intelligence** - Load once, see everything analyzed
+- **Smart Categorization** - Prime/Safe/Risky/Avoid targets
+- **Performance Coaching** - Track improvement, personalized challenges
+- **Multi-source Data** - Combines Torn API, FF Scouter, and Spy Database
 
 ---
 
-## 📋 PROJECT PHASES
+## 🔄 CORRECT USER FLOW
 
-### ✅ PHASE 0: Planning & Architecture (COMPLETE)
+### **Initial Load:**
+1. User enters **2 fields:**
+   - Their Torn User ID (e.g., 2702970)
+   - Enemy Faction ID (e.g., 42505)
+
+2. Click **"INITIALIZE SCAN"**
+
+3. System **AUTOMATICALLY fetches ALL data:**
+   - **YOUR stats** from Torn API (includes merits, education, enhancements)
+   - **YOUR stats** from FF Scouter (their estimate)
+   - **Enemy faction roster** (all members)
+   - **FF Scouter data** for EVERY enemy (FF multiplier + estimated stats)
+   - **Spy database** check for each enemy (key: `spy_{uid}`)
+
+4. System **ANALYZES EVERY TARGET** and categorizes:
+   - **Amber** - Prime targets (high respect, good win chance)
+   - **Green** - Safe targets (easy wins, guaranteed respect)
+   - **Blue** - Risky targets (possible but dangerous)
+   - **Red** - Avoid targets (you'll lose, waste energy)
+
+### **Dashboard Display:**
+User sees:
+- **YOUR profile** - Both Torn stats AND FF Scouter stats
+- **FULL target list** - Already sorted and categorized
+- **Stat source selector** - Choose Torn stats OR FF Scouter stats for calculations
+- **Category breakdown** - Count of targets in each tier
+- **Click any target** → Detailed analysis modal with educational reasoning
+
+### **Generate Report:**
+- User chooses which stat source to use (Torn vs FF Scouter)
+- System recalculates ALL targets using chosen stat source
+- Shows updated categorization
+- Each target shows: Win %, FF multiplier, verdict, data source
+
+---
+
+## 📋 COMPLETE TODO LIST
+
+### ✅ PHASE 0: Planning (COMPLETE)
 - [x] Define project vision
-- [x] Choose tech stack (Cloudflare Workers + Discord)
-- [x] Decide on prototype approach (web first, then port)
+- [x] Document correct user flow
+- [x] Identify data sources (Torn API, FF Scouter, Spy DB)
+- [x] Choose tech stack (Cloudflare Workers)
 - [x] Create master documentation
 
-### 🔄 PHASE 1: Web Prototype Development (IN PROGRESS)
-**Goal:** Build and perfect the advisor logic in a web interface
+---
 
-#### 1.1 Core Interface
-- [x] Main dashboard with module cards
-- [x] Mobile-responsive design (Discord-friendly)
-- [x] Setup/configuration modal
-- [x] Navigation system
-- [ ] Polish animations and interactions
+### 🔄 PHASE 1: Data Import & Tactical Dashboard (IN PROGRESS)
 
-#### 1.2 Combat Advisor Module ✅ COMPLETE
-- [x] Target analysis display
-- [x] Win probability calculator (universal logic for all users)
-- [x] Weapon/attack type recommendations
-- [x] **Weapon Loadout System** - Teach users to prepare 3-4 weapon presets
-- [x] Optimal timing suggestions
-- [x] **Xanax/Energy Timer** - Countdown for war preparation (stack to 1000E)
-- [x] Risk assessment system (what you're risking: energy waste, respect loss, hospitalization)
-- [x] **Educational tooltips** - Explain WHY each recommendation works
-- [x] Combat intelligence engine built
-- [x] Integrate intelligence engine into UI ✅ DONE!
-- [x] Add interactive demonstrations
-- [ ] Test with realistic scenarios
-- [ ] User feedback and refinement
+#### 1.1 Initial Setup Screen
+- [ ] Create 2-field input form (User ID, Enemy Faction ID)
+- [ ] "Initialize Scan" button
+- [ ] Loading state with progress indicators
+- [ ] Error handling for invalid IDs
 
-#### 1.3 Faction War Intelligence
-- [ ] FF Scouter data integration
-- [ ] Your faction vs enemy comparison
-- [ ] Respect potential calculator
-- [ ] Vulnerable target identification
-- [ ] War strategy recommendations
+#### 1.2 Data Fetching
+- [ ] **Torn API Integration:**
+  - [ ] Fetch user stats with `selections=profile,battlestats`
+  - [ ] Parse response for total stats (includes enhancements)
+  - [ ] Fetch enemy faction roster with `selections=basic`
+  - [ ] Extract all enemy member IDs
+  - [ ] Handle API errors gracefully
+  - [ ] Implement rate limiting (100 requests/min)
 
-#### 1.4 Performance Coach
-- [ ] Battle history tracking
-- [ ] Performance metrics dashboard
-- [ ] Personalized challenges system
-- [ ] Improvement tracking over time
-- [ ] Weakness identification & advice
+- [ ] **FF Scouter Integration:**
+  - [ ] Research FF Scouter API endpoint
+  - [ ] Batch request for user stats
+  - [ ] Batch request for enemy stats (by chunks)
+  - [ ] Parse FF multiplier for each target
+  - [ ] Parse estimated battle stats
+  - [ ] Handle API failures
 
-#### 1.5 Smart Recommendations Engine
-- [ ] Combat damage formulas
-- [ ] Win probability algorithms
-- [ ] Booster/drug recommendations
-- [ ] Energy efficiency calculations
-- [ ] Respect per hit optimization
+- [ ] **Spy Database Integration:**
+  - [ ] Check KV for each enemy: `spy_{uid}`
+  - [ ] Parse spy data if exists
+  - [ ] Use spy stats as priority over FF Scouter estimates
+  - [ ] Track which enemies have spy data vs estimates
 
-### ⏳ PHASE 2: Logic Refinement (UPCOMING)
-- [ ] Test all calculations with real Torn data
-- [ ] Refine advice quality
-- [ ] Add edge cases handling
+#### 1.3 Combat Intelligence Engine
+- [ ] **Win Probability Calculator:**
+  - [ ] Calculate using Torn stats vs enemy stats
+  - [ ] Calculate using FF Scouter stats vs enemy stats
+  - [ ] Apply FF multiplier to calculations
+  - [ ] Return probability (0-1), confidence level, stat ratio
+  - [ ] Generate educational reasoning text
+
+- [ ] **Target Categorization:**
+  - [ ] Amber: High respect + good win chance (FF 3.0-4.7, Win >70%)
+  - [ ] Green: Easy wins (FF >4.7, Win >85%)
+  - [ ] Blue: Risky but possible (FF 2.0-3.0, Win 40-70%)
+  - [ ] Red: Avoid (Win <40%)
+  - [ ] Sort within each category by respect potential
+
+- [ ] **Respect Calculation:**
+  - [ ] Base respect from target stats
+  - [ ] FF multiplier impact
+  - [ ] Respect per energy ratio
+  - [ ] Total potential respect per target
+
+- [ ] **Data Source Priority:**
+  - [ ] For enemies: Spy DB > FF Scouter estimate
+  - [ ] Track which source was used for each target
+  - [ ] Display data source to user
+
+#### 1.4 Dashboard UI
+- [ ] **User Profile Card:**
+  - [ ] Display user name and Torn ID
+  - [ ] Show Torn total stats
+  - [ ] Show FF Scouter total stats
+  - [ ] Highlight which is higher
+  - [ ] "Edit" button to restart scan
+
+- [ ] **Stat Source Selector:**
+  - [ ] Radio buttons: Torn Stats / FF Scouter Stats
+  - [ ] Recalculate all targets when changed
+  - [ ] Update all displays in real-time
+
+- [ ] **Target List Display:**
+  - [ ] Color-coded cards (Amber/Green/Blue/Red)
+  - [ ] Show: Name, FF multiplier, Win %, Verdict
+  - [ ] Sort by category, then by respect
+  - [ ] Click to open detailed modal
+
+- [ ] **Category Breakdown:**
+  - [ ] Show count in each tier
+  - [ ] Total potential respect
+  - [ ] Click to filter by category
+
+- [ ] **Target Detail Modal:**
+  - [ ] Full stats comparison (user vs target)
+  - [ ] Win probability with confidence level
+  - [ ] Educational reasoning ("Why this works")
+  - [ ] FF multiplier impact explanation
+  - [ ] Data source indicator (spy vs estimate)
+  - [ ] Direct link to attack in Torn
+  - [ ] Close/back button
+
+#### 1.5 Mobile Optimization
+- [ ] Responsive layout (320px to 1920px)
+- [ ] Touch-friendly buttons (min 44px)
+- [ ] Readable fonts on small screens
+- [ ] Optimized for Discord embedded browser
+- [ ] Fast loading (< 3 seconds)
+
+#### 1.6 Testing & Refinement
+- [ ] Test with real Torn data
+- [ ] Verify calculations match real outcomes
+- [ ] User feedback collection
+- [ ] Edge case handling (empty faction, API failures)
 - [ ] Performance optimization
-
-### ⏳ PHASE 3: Discord Bot Development (UPCOMING)
-- [ ] Cloudflare Worker setup
-- [ ] Discord bot registration
-- [ ] Slash command implementation
-- [ ] Embed message design
-- [ ] Interactive buttons/components
-
-### ⏳ PHASE 4: Production Deployment (UPCOMING)
-- [ ] Cloudflare Worker deployment
-- [ ] KV storage integration
-- [ ] Spy database connection
-- [ ] Torn API integration
-- [ ] User authentication
 
 ---
 
-## 🏗️ SYSTEM ARCHITECTURE
+### ⏳ PHASE 2: War Intelligence Module (UPCOMING)
 
-### Current (Web Prototype):
-```
-┌─────────────────────────────────────────┐
-│         React Web Interface             │
-│  (Testing & Development Environment)    │
-│                                         │
-│  ┌──────────────────────────────────┐  │
-│  │   Combat Advisor Module          │  │
-│  │   - Target Analysis              │  │
-│  │   - Win Calculator               │  │
-│  │   - Recommendations              │  │
-│  └──────────────────────────────────┘  │
-│                                         │
-│  ┌──────────────────────────────────┐  │
-│  │   War Intelligence Module        │  │
-│  │   - Faction Comparison           │  │
-│  │   - Respect Prediction           │  │
-│  │   - Strategy Advisor             │  │
-│  └──────────────────────────────────┘  │
-│                                         │
-│  ┌──────────────────────────────────┐  │
-│  │   Performance Coach Module       │  │
-│  │   - Challenge System             │  │
-│  │   - Progress Tracking            │  │
-│  │   - Weakness Analysis            │  │
-│  └──────────────────────────────────┘  │
-└─────────────────────────────────────────┘
+#### 2.1 Faction Comparison
+- [ ] Your faction roster analysis
+- [ ] Enemy faction roster analysis
+- [ ] Power comparison visualization
+- [ ] Identify vulnerable targets for each faction member
+
+#### 2.2 Respect Prediction
+- [ ] Total potential respect calculator
+- [ ] Per-member respect breakdown
+- [ ] Best-case vs realistic scenarios
+- [ ] Time-based projections (if war lasts X hours)
+
+#### 2.3 Strategy Recommendations
+- [ ] Optimal timing analysis (when enemies are offline)
+- [ ] Focus target recommendations (high value, low risk)
+- [ ] Attack pattern suggestions (who hits whom)
+- [ ] Coordination advice for faction
+
+#### 2.4 Weapon Loadout System
+- [ ] Analyze target stat distribution
+- [ ] Recommend 4 weapon slots:
+  - PRIMARY (exploits weakness)
+  - BACKUP (reliable melee)
+  - TEMPORARY (2x damage for critical fights)
+  - ULTIMATE (best weapon for high-value only)
+- [ ] Educational explanations for each choice
+- [ ] Pre-configuration instructions
+
+#### 2.5 Xanax War Timer
+- [ ] War start time input
+- [ ] Current energy input
+- [ ] Calculate time to reach 1000E
+- [ ] Alerts at 5hr, 1hr, 15min before war
+- [ ] "Take Xanax Now" recommendations
+- [ ] Educational: Why 5 hours? (energy refill math)
+
+---
+
+### ⏳ PHASE 3: Performance Coach (UPCOMING)
+
+#### 3.1 Battle History Tracking
+- [ ] Log every fight (target, outcome, respect gained)
+- [ ] Store in KV with user ID
+- [ ] Calculate win rate over time
+- [ ] Energy efficiency tracking
+
+#### 3.2 Performance Metrics
+- [ ] Total fights, wins, losses
+- [ ] Win rate percentage
+- [ ] Average respect per fight
+- [ ] Energy efficiency (respect per energy)
+- [ ] Improvement rate (week over week)
+
+#### 3.3 Personalized Challenges
+- [ ] Analyze user performance to identify weaknesses
+- [ ] Generate achievable challenges:
+  - "Attack 3 targets with FF >3.0"
+  - "Achieve 90% win rate this week"
+  - "Earn 5000 respect in one war"
+- [ ] Track challenge completion
+- [ ] Reward system (badges/achievements)
+
+#### 3.4 Weakness Analysis
+- [ ] Identify patterns in losses
+- [ ] Suggest training focus (which stats to train)
+- [ ] Recommend gym routines
+- [ ] Battle strategy improvements
+
+---
+
+### ⏳ PHASE 4: Discord Bot Integration (UPCOMING)
+
+#### 4.1 Discord Bot Setup
+- [ ] Create Discord application
+- [ ] Generate bot token
+- [ ] Configure OAuth2 permissions
+- [ ] Invite bot to server
+
+#### 4.2 Slash Commands
+- [ ] `/advisor initialize <user_id> <enemy_faction>`
+- [ ] `/advisor targets [category]`
+- [ ] `/advisor analyze <target_id>`
+- [ ] `/advisor war-timer <war_time>`
+- [ ] `/advisor stats`
+- [ ] `/advisor challenges`
+
+#### 4.3 Embed Design
+- [ ] Compact target list embeds
+- [ ] Detailed analysis embeds
+- [ ] Interactive buttons (Next, Previous, Details)
+- [ ] Color-coded by category
+- [ ] Mobile-friendly formatting
+
+#### 4.4 Real-time Features
+- [ ] Alert when high-value target comes online
+- [ ] War countdown notifications
+- [ ] Challenge completion notifications
+- [ ] Weekly performance reports
+
+---
+
+### ⏳ PHASE 5: Production Deployment (UPCOMING)
+
+#### 5.1 Cloudflare Worker
+- [ ] Deploy to production
+- [ ] Configure KV namespace
+- [ ] Set environment variables
+- [ ] Enable caching
+- [ ] Set up error monitoring
+
+#### 5.2 Security
+- [ ] Encrypt Torn API keys in KV
+- [ ] Validate all user inputs
+- [ ] Rate limiting per user
+- [ ] CORS configuration
+- [ ] API authentication
+
+#### 5.3 Performance
+- [ ] Cache frequently accessed data
+- [ ] Batch API requests efficiently
+- [ ] Optimize KV reads/writes
+- [ ] Monitor response times
+- [ ] CDN optimization
+
+#### 5.4 Monitoring
+- [ ] Error logging (Sentry/LogFlare)
+- [ ] Analytics (request counts, response times)
+- [ ] User feedback collection
+- [ ] API usage tracking
+- [ ] Uptime monitoring
+
+---
+
+## 💾 DATA STRUCTURES
+
+### User Data (KV: `user_{tornId}`)
+```json
+{
+  "tornId": "2702970",
+  "name": "OPERATOR",
+  "tornStats": {
+    "total": 2000000000,
+    "strength": 500000000,
+    "defense": 480000000,
+    "speed": 520000000,
+    "dexterity": 500000000,
+    "lastUpdated": 1707307800000
+  },
+  "ffScouterStats": {
+    "total": 1950000000,
+    "strength": 490000000,
+    "defense": 475000000,
+    "speed": 510000000,
+    "dexterity": 475000000,
+    "lastUpdated": 1707307800000
+  },
+  "preferences": {
+    "preferredStatSource": "torn",
+    "autoAnalyze": true
+  }
+}
 ```
 
-### Future (Production):
+### Spy Data (KV: `spy_{uid}`)
+```json
+{
+  "stats": {
+    "strength": 180000000,
+    "defense": 160000000,
+    "speed": 190000000,
+    "dexterity": 170000000
+  },
+  "lastUpdated": 1707307800000,
+  "source": "manual_spy"
+}
 ```
-┌──────────────┐         ┌─────────────────────────────┐
-│   Discord    │ ◄─────► │   Cloudflare Worker         │
-│     Bot      │         │   (Main Application Logic)  │
-└──────────────┘         └─────────────────────────────┘
-                                    │
-                    ┌───────────────┼───────────────┐
-                    ▼               ▼               ▼
-            ┌──────────────┐ ┌──────────┐ ┌──────────────┐
-            │ Cloudflare KV│ │ Torn API │ │ Spy Database │
-            │   Storage    │ │          │ │  (Existing)  │
-            │              │ │          │ │              │
-            │ - User Data  │ │ - Stats  │ │ - FF Scout   │
-            │ - History    │ │ - Faction│ │ - Intel      │
-            │ - Progress   │ │ - Battles│ │              │
-            └──────────────┘ └──────────┘ └──────────────┘
+
+### Target Analysis (Calculated in real-time)
+```json
+{
+  "uid": "123456",
+  "name": "EnemyPlayer",
+  "fairFight": 2.5,
+  "enemyStats": {
+    "total": 800000000,
+    "source": "spy"
+  },
+  "analysis": {
+    "winProbability": 0.85,
+    "confidence": "high",
+    "statRatio": 1.65,
+    "tier": "amber",
+    "verdict": "RECOMMENDED",
+    "reasoning": "Your 2.0B total with 2.5x FF gives you 5.0B effective stats vs their 800M. This 6.25x advantage means 95% win chance with minimal damage taken.",
+    "respectValue": 450,
+    "respectPerEnergy": 18.0
+  }
+}
 ```
 
 ---
 
 ## 🔌 API INTEGRATIONS
 
-### Phase 1 (Web Prototype):
-- **Mock Data** - Simulated Torn data for testing
-- **Local Storage** - Browser-based user preferences
+### Torn Official API
+- **Base URL:** `https://api.torn.com/`
+- **Authentication:** API key per user
+- **Rate Limit:** 100 requests/minute
 
-### Phase 2 (Production):
-- **Torn Official API**
-  - Endpoint: `https://api.torn.com/`
-  - Data: User stats, faction info, battle logs
-  - Authentication: API key per user
+**Endpoints Used:**
+```
+GET /user/{id}?selections=profile,battlestats&key={key}
+→ Returns: name, total battle stats (includes all enhancements)
 
-- **FF Scouter** (Details TBD)
-  - Purpose: Fair fight multiplier data
-  - Integration method: TBD
+GET /faction/{id}?selections=basic&key={key}
+→ Returns: faction info, member list with IDs
+```
 
-- **Spy Database** (Your Existing System)
-  - Storage: Cloudflare KV
-  - Purpose: Enemy intelligence
-  - Integration: Direct KV access
+### FF Scouter API
+- **Base URL:** `https://ffscouter.com/api/v1/`
+- **Authentication:** API key
+- **Batch Support:** Yes (up to 100 IDs per request)
 
-- **Discord API**
-  - Interactions endpoint
-  - Slash commands
-  - Embed messages
+**Endpoint:**
+```
+GET /get-stats?key={key}&targets={csv_ids}&user_id={uid}
+→ Returns: Array of {fair_fight, bs_estimate} for each target
+```
+
+### Spy Database (KV)
+- **Namespace:** ROTATOR (existing)
+- **Key Format:** `spy_{uid}` (NO faction ID)
+- **Value:** JSON with stats object
+- **Priority:** Use spy data if available, else FF Scouter
 
 ---
 
-## 💾 DATA STRUCTURES
+## 🏗️ SYSTEM ARCHITECTURE
 
-### User Profile
-```javascript
-{
-  userId: "torn_123456",
-  discordId: "discord_789",
-  totalStats: "2.5B",
-  factionId: "12345",
-  preferences: {
-    mode: "war|chain|retaliation",
-    autoAdvice: true,
-    challengeLevel: "medium"
-  },
-  battleHistory: [...],
-  currentChallenges: [...],
-  performance: {
-    wins: 150,
-    losses: 30,
-    efficiency: 1.95,
-    improvementRate: 12.5
-  }
-}
 ```
-
-### Target Analysis
-```javascript
-{
-  targetId: "torn_654321",
-  name: "EnemyPlayer",
-  stats: {
-    total: "1.8B",
-    strength: 450000000,
-    defense: 420000000,
-    speed: 480000000,
-    dexterity: 450000000
-  },
-  ffMultiplier: 2.1,
-  status: "online|offline|hospital|jail",
-  analysis: {
-    winProbability: 0.85,
-    recommendedApproach: "aggressive",
-    optimalWeapon: "rifle",
-    suggestedBoosters: ["xanax", "fhc"],
-    respectValue: 450,
-    risk: "low|medium|high",
-    reasoning: "Your stats advantage of 1.4x combined with..."
-  }
-}
+┌─────────────────────────────────────────────────┐
+│           USER INTERFACE                         │
+│  (Cloudflare Worker serving HTML)               │
+│                                                  │
+│  ┌────────────────────────────────────────────┐│
+│  │  INITIALIZE SCAN                           ││
+│  │  [User ID] [Enemy Faction ID] [GO]        ││
+│  └────────────────────────────────────────────┘│
+│                    ↓                             │
+│  ┌────────────────────────────────────────────┐│
+│  │  LOADING: Fetching data...                 ││
+│  │  ✓ Your Torn stats                         ││
+│  │  ✓ Your FF Scouter stats                   ││
+│  │  ✓ Enemy faction roster (45 members)       ││
+│  │  ⏳ FF Scouter data (batch 1/4)            ││
+│  └────────────────────────────────────────────┘│
+│                    ↓                             │
+│  ┌────────────────────────────────────────────┐│
+│  │  TACTICAL DASHBOARD                        ││
+│  │                                            ││
+│  │  Your Profile: 2.0B (Torn) | 1.95B (FF)   ││
+│  │  Stat Source: ○ Torn  ● FF Scouter        ││
+│  │                                            ││
+│  │  Categories:                               ││
+│  │  🟢 Green (12) - Safe targets             ││
+│  │  🟠 Amber (18) - Prime targets            ││
+│  │  🔵 Blue (10) - Risky targets             ││
+│  │  🔴 Red (5) - Avoid                        ││
+│  │                                            ││
+│  │  [Target Cards - Click for details]       ││
+│  └────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────┘
+                     │
+        ┌────────────┼────────────┐
+        │            │            │
+        ▼            ▼            ▼
+  ┌──────────┐ ┌──────────┐ ┌──────────┐
+  │ Torn API │ │FF Scouter│ │ Spy DB   │
+  │          │ │   API    │ │  (KV)    │
+  │ - Stats  │ │ - FF     │ │ - Intel  │
+  │ - Roster │ │ -估计    │ │          │
+  └──────────┘ └──────────┘ └──────────┘
 ```
-
-### War Prediction
-```javascript
-{
-  enemyFactionId: "67890",
-  analysis: {
-    totalRespectPotential: 2500,
-    beatableTargets: [
-      {
-        targetId: "...",
-        category: "safe|prime|risky",
-        expectedRespect: 450,
-        confidence: 0.9
-      }
-    ],
-    strategy: "Focus on prime targets during 18:00-22:00 TCT...",
-    warnings: ["3 members have higher stats - avoid"],
-    optimalTiming: "evenings when 60% are offline"
-  }
-}
-```
-
----
-
-## 🧠 INTELLIGENCE ALGORITHMS
-
-### Win Probability Calculator
-**Status:** To be implemented  
-**Formula:** Based on Torn combat mechanics
-- Total stats comparison
-- FF multiplier impact
-- Weapon advantages
-- Booster effects
-- Historical win rates
-
-### Respect Optimization
-**Status:** To be implemented  
-**Logic:**
-- Respect per energy spent
-- Respect per minute calculation
-- FF multiplier maximization
-- Target selection priority
-
-### Challenge Generator
-**Status:** To be implemented  
-**Criteria:**
-- Current performance level
-- Identified weaknesses
-- Achievable but stretching goals
-- Progressive difficulty
-
-### Strategy Advisor
-**Status:** To be implemented  
-**Inputs:**
-- Player stats vs target stats
-- Available resources (weapons, boosters, drugs)
-- Target status and timing
-- Historical success patterns
-
-**Output:**
-- Step-by-step combat plan
-- Resource recommendations
-- Timing advice
-- Risk warnings
-- Expected outcomes
-
----
-
-## 📱 MOBILE-FIRST DESIGN PRINCIPLES
-
-Since this will be used in Discord (heavily mobile):
-- **Compact layouts** - information dense but readable
-- **Touch-friendly** - buttons min 44px, good spacing
-- **Fast loading** - minimize data/images
-- **Readable fonts** - 14px minimum for body text
-- **Clear hierarchy** - most important info prominent
-- **Scrollable sections** - no horizontal scroll
-- **Embeds** - use Discord's native embed format
 
 ---
 
 ## 🎨 DESIGN SYSTEM
 
-### Color Palette
-```css
---danger-red: #ff2b2b      /* Suicide targets, warnings */
---safe-green: #00ff9c       /* Safe targets, success */
---prime-orange: #ff9d00     /* Prime targets, important */
---risky-cyan: #00d2ff       /* Risky targets, caution */
---accent-purple: #a855f7    /* Stats, special features */
---accent-pink: #ec4899      /* Target analysis */
-
---bg-dark: #0a0a0a          /* Main background */
---bg-card: #1a1a1a          /* Card backgrounds */
---bg-elevated: #2a1a2a      /* Modals, elevated surfaces */
-
---text-primary: #ffffff     /* Main text */
---text-secondary: #888888   /* Labels, less important */
---border-subtle: rgba(255, 255, 255, 0.1)
+### Color Coding (Torn-style)
+```
+🟢 Green (Safe):    #00ff9c  - FF >4.7, Win >85%
+🟠 Amber (Prime):   #f6da00  - FF 3.0-4.7, Win 70-85%
+🔵 Blue (Risky):    #009fff  - FF 2.0-3.0, Win 40-70%
+🔴 Red (Avoid):     #ff3333  - FF <2.0, Win <40%
 ```
 
 ### Typography
-- **Primary Font:** IBM Plex Mono (monospace, tactical feel)
-- **Accent Font:** Orbitron (headers, important stats)
-- **Mobile-friendly sizes**
-- **Uppercase for labels** (tactical aesthetic)
+- **Primary:** Inter (clean, readable)
+- **Accent:** Orbitron (headers, stats)
+- **Monospace:** Courier New (tactical data)
 
 ---
 
-## 🔧 DEVELOPMENT NOTES
+## ✅ CURRENT SESSION STATUS
 
-### Current Session Progress:
-1. ✅ Created initial Tactical HUD prototype
-2. ✅ Established project vision and scope
-3. ✅ Decided on phased approach (web → Discord)
-4. ✅ Created master documentation with TODO tracking
-5. ✅ Built complete combat intelligence engine with:
-   - Win probability calculator with educational reasoning
-   - Advanced risk assessment (5 categories)
-   - Intelligent weapon loadout recommendations (4 slots)
-   - Xanax war timer with smart alerts
-   - Educational tooltips throughout
-6. ✅ Created production-grade web interface with:
-   - Target analysis cards with real-time calculations
-   - Interactive Xanax timer with energy slider
-   - Detailed modal views with full intelligence
-   - Mobile-responsive design
-   - Smooth animations and interactions
-   - Educational sections explaining WHY
-7. ✅ **CLOUDFLARE DEPLOYMENT READY:**
-   - Complete setup guide (step-by-step)
-   - Worker code (index.js with routing)
-   - Discord handler (slash commands)
-   - Configuration files (wrangler.toml, package.json)
-   - Deployment script (automated setup)
-   - KV storage integration
-   - Ready to deploy to production!
-8. 🔄 Next: Deploy to Cloudflare, test live, gather feedback
+### What We've Built:
+1. ✅ Clarified correct user flow
+2. ✅ Identified all data sources
+3. ✅ Defined data priority (Spy > FF Scouter)
+4. ✅ Created comprehensive TODO list
+5. ✅ Updated project documentation
 
-### Technical Decisions:
-- **React** for web prototype (familiar, fast development)
-- **Cloudflare Workers** for production (you have existing setup)
-- **KV Storage** for data persistence
-- **Discord.js** or native API for bot
+### What We're Building Next:
+1. 🔄 Data import system (Torn API + FF Scouter + Spy DB)
+2. 🔄 Combat intelligence engine
+3. 🔄 Tactical dashboard UI
+4. 🔄 Target categorization display
 
-### Open Questions:
-- [ ] FF Scouter API access method?
-- [ ] Exact Torn combat damage formulas?
-- [ ] Spy database schema details?
-- [ ] How many concurrent users expected?
+### Blockers:
+- [ ] Need FF Scouter API documentation/key
+- [ ] Need Torn API key for testing
+- [ ] Confirm exact spy database key format
 
 ---
 
-## 📞 INTEGRATION CHECKLIST (For Production Phase)
+## 📞 QUICK REFERENCE
 
-### Discord Bot Setup
-- [ ] Create Discord application
-- [ ] Generate bot token
-- [ ] Set up OAuth2 permissions
-- [ ] Configure slash commands
-- [ ] Set interaction endpoint to Cloudflare Worker
+### API Keys Needed:
+- Torn API key (user provides)
+- FF Scouter API key (system-wide)
 
-### Cloudflare Worker
-- [ ] Deploy worker code
-- [ ] Configure KV namespace bindings
-- [ ] Set environment variables (Discord token, Torn API keys)
-- [ ] Configure routes
-- [ ] Set up cron triggers (for automated analysis)
+### KV Namespace:
+- ROTATOR: `7d26ddc573674ba19db3af3951322bf7`
 
-### Data Migration
-- [ ] Connect to existing spy database KV
-- [ ] Define shared data structures
-- [ ] Implement data sync logic
+### Deployment:
+- URL: `https://torn-war-bridge.tmecf.workers.dev`
+- Command: `wrangler deploy`
 
-### Torn API
-- [ ] Get API key management working
-- [ ] Implement rate limiting
-- [ ] Cache frequently accessed data
-- [ ] Error handling for API failures
-
----
-
-## 🎯 SUCCESS METRICS
-
-How we'll know it's working:
-1. **Advice Quality** - Users report recommendations are accurate
-2. **Win Rate Improvement** - Players show measurable improvement
-3. **Engagement** - Users complete challenges and check regularly
-4. **Performance** - Bot responds to Discord commands < 2 seconds
-5. **Reliability** - 99%+ uptime, no data loss
-
----
-
-## 🚀 NEXT IMMEDIATE TASKS
-
-### Right Now (Current Session):
-1. [ ] Build Combat Advisor logic
-2. [ ] Implement win probability calculator
-3. [ ] Create recommendation engine
-4. [ ] Design target analysis interface
-5. [ ] Add mobile-responsive layouts
-
-### Next Session:
-1. [ ] War intelligence module
-2. [ ] Performance coach with challenges
-3. [ ] Testing with realistic data
-4. [ ] Refinement based on feedback
-
----
-
-## 📝 NOTES & IDEAS
-
-### Core Principles:
-- **Educational First** - Don't just tell them what to do, teach them WHY
-- **They learn by doing** - Each recommendation explains the logic so they internalize it
-- **Multi-dimensional thinking** - Consider energy, timing, risk, reward, opportunity cost
-
-### Risk Assessment Categories:
-1. **Energy Risk** - Wasting energy on low-value targets
-2. **Respect Risk** - Losing respect if you get hospitalized
-3. **Timing Risk** - Attacking when conditions aren't optimal
-4. **Opportunity Cost** - Could you be hitting a better target instead?
-5. **War Impact** - How this affects your faction's war performance
-
-### Xanax Timer Feature:
-- Countdown to war start (when users should have 1000E stacked)
-- Alerts at key intervals: 5 hours before, 1 hour before, 15 mins before
-- Shows current energy and time needed to reach 1000E
-- Reminds users to take Xanax at optimal time
-
-### Weapon Loadout System:
-- Pre-configure 3-4 weapon setups for different scenarios:
-  - **Heavy Damage** - Maximum power (rifles, clubs)
-  - **Speed/Dexterity** - Fast attacks (SMGs, knives)  
-  - **Balanced** - All-around performance
-  - **Specialist** - Situation-specific (shotguns for close range)
-- Quick-switch recommendations based on target stats
-- Teaches weapon mechanics and when to use each type
-
-- Consider adding a "practice mode" where users can simulate battles
-- Voice chat integration? Bot could give live advice during wars
-- Achievement/badge system for completing challenges
-- Weekly performance reports sent to Discord DM
-- Community leaderboard for top improvers
-- Integration with training gym recommendations
-- Alert system for high-value targets coming online
+### Important Links:
+- Torn API Docs: https://www.torn.com/api.html
+- FF Scouter: https://ffscouter.com/
+- Cloudflare Docs: https://developers.cloudflare.com/workers/
 
 ---
 
 **END OF MASTER DOCUMENT**  
-*This document will be updated continuously throughout development*
+*Updated: 2026-02-08 - Reflects correct data flow and complete TODO list*
