@@ -429,12 +429,12 @@ function getUI() {
           // Check spy database - use if HIGHER than FF Scouter
           // TODO: Implement spy check
           
-          // Determine tier
+          // Determine tier (custom ranges)
           let tier;
-          if (ff < 1.8) tier = 'red';        // Avoid - too low FF
-          else if (ff < 4.2) tier = 'green'; // Prime targets
-          else if (ff < 5.2) tier = 'amber'; // Safe targets
-          else tier = 'blue';                // Risky - high FF
+          if (ff < 1.8) tier = 'red';        // Avoid - too low
+          else if (ff < 4.2) tier = 'green'; // Prime
+          else if (ff < 5.2) tier = 'amber'; // Safe
+          else tier = 'blue';                // Risky - very high
           
           const obj = {
             m: member,
@@ -474,7 +474,7 @@ function getUI() {
         card.innerHTML = \`
           <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
             <div style="font-weight: 700; font-size: 16px;">\${obj.m.name}</div>
-            <div style="color: var(--\${obj.tier}); font-weight: 700;">\${obj.ff.toFixed(2)}x</div>
+            <div style="color: var(--\${obj.tier}); font-weight: 700; font-size: 18px;">\${obj.ff.toFixed(2)}x</div>
           </div>
           <div class="stat-row">
             <div><span class="label">Est. Power</span><div>\${formatStats(obj.total)}</div></div>
