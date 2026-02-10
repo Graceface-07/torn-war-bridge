@@ -337,6 +337,15 @@ function getUI() {
   <div class="container">
     <h1>TACTICAL ADVISOR</h1>
     
+    <!-- Modal Background -->
+    <div id="modalBg" onclick="closeModal()" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000;"></div>
+    
+    <!-- Target Detail Modal -->
+    <div id="targetModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 600px; background: var(--panel); border: 2px solid var(--border); border-radius: 25px; padding: 30px; z-index: 1001; max-height: 80vh; overflow-y: auto;">
+      <button onclick="closeModal()" style="position: absolute; top: 15px; right: 15px; background: var(--red); width: 35px; height: 35px; border-radius: 50%; border: none; color: #fff; font-weight: 700; cursor: pointer;">✕</button>
+      <div id="modalContent"></div>
+    </div>
+    
     <!-- Initialize Screen -->
     <div id="initScreen" class="card">
       <h2>🎯 INITIALIZE BATTLEFIELD SCAN</h2>
@@ -377,8 +386,45 @@ function getUI() {
       </div>
       
       <div class="card">
+        <h2>⏱️ WAR TIMER</h2>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          <input type="datetime-local" id="warTime" style="flex: 1; margin: 0;" placeholder="War Start Time">
+          <button onclick="startWarTimer()" style="width: auto; padding: 12px 20px; margin: 0;">Start Timer</button>
+        </div>
+        <div id="timerDisplay" style="display: none;">
+          <div style="text-align: center; padding: 20px; background: #111; border-radius: 15px;">
+            <div id="countdown" style="font-size: 36px; font-weight: 700; color: var(--blue); font-family: Orbitron;"></div>
+            <div class="label" style="margin-top: 10px;">Until War Starts</div>
+            <div id="xanaxAdvice" style="margin-top: 15px; padding: 10px; background: var(--panel); border-radius: 10px; border-left: 4px solid var(--amber);"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
         <h2>📊 TARGET ANALYSIS</h2>
-        <div id="categoryBreakdown" style="display: flex; gap: 20px; margin-bottom: 20px;"></div>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 200px;">
+            <span class="label">Sort By</span>
+            <select id="sortBy" onchange="displayTargets(this.value, document.getElementById('filterTier').value)" style="width: 100%; margin: 0;">
+              <option value="respect">Respect (High to Low)</option>
+              <option value="winChance">Win Chance (High to Low)</option>
+              <option value="ff">Fair Fight (High to Low)</option>
+              <option value="level">Level (High to Low)</option>
+              <option value="name">Name (A-Z)</option>
+            </select>
+          </div>
+          <div style="flex: 1; min-width: 200px;">
+            <span class="label">Filter Tier</span>
+            <select id="filterTier" onchange="displayTargets(document.getElementById('sortBy').value, this.value)" style="width: 100%; margin: 0;">
+              <option value="all">All Targets</option>
+              <option value="amber">🟠 Safe Only</option>
+              <option value="green">🟢 Prime Only</option>
+              <option value="blue">🔵 Risky Only</option>
+              <option value="red">🔴 Avoid Only</option>
+            </select>
+          </div>
+        </div>
+        <div id="categoryBreakdown" style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;"></div>
         <div id="targetGrid" class="grid"></div>
       </div>
     </div>
@@ -455,6 +501,17 @@ function getUI() {
       await startScan(factionData.members);
     }
     
+    function calculateRespect(enemyTotal, fairFight) {
+      // Torn respect formula (simplified):
+      // Base respect ≈ (enemy_stats / 100000) * fair_fight
+      // Capped at certain values
+      
+      const baseRespect = (enemyTotal / 100000000) * fairFight;
+      const respect = Math.min(Math.max(baseRespect, 1), 500); // Min 1, max 500
+      
+      return Math.round(respect);
+    }
+    
     function switchStatSource(source) {
       SESSION.activeStatSource = source;
       
@@ -493,6 +550,10 @@ function getUI() {
         obj.verdict = analysis.verdict;
         obj.reasoning = analysis.reasoning;
         obj.statRatio = analysis.statRatio;
+        
+        // Recalculate respect
+        obj.respect = calculateRespect(obj.total, obj.ff);
+        obj.respectPerEnergy = (obj.respect / 25).toFixed(1);
       });
       
       // Re-render
@@ -625,6 +686,9 @@ function getUI() {
           const myStats = SESSION.activeStatSource === 'torn' ? SESSION.myTornStats : SESSION.myFFStats;
           const analysis = calculateWinProbability(myStats, total, ff);
           
+          // Calculate respect value
+          const respectValue = calculateRespect(total, ff);
+          
           // Determine tier (custom ranges)
           let tier;
           if (ff < 1.8) tier = 'amber';      // Safe - too low FF
@@ -642,7 +706,9 @@ function getUI() {
             winChance: analysis.winChance,
             verdict: analysis.verdict,
             reasoning: analysis.reasoning,
-            statRatio: analysis.statRatio
+            statRatio: analysis.statRatio,
+            respect: respectValue,
+            respectPerEnergy: (respectValue / 25).toFixed(1) // 25 energy per attack
           };
           
           SESSION.rawData.push(obj);
@@ -657,19 +723,60 @@ function getUI() {
       document.getElementById('initScreen').classList.add('hidden');
       document.getElementById('dashboard').classList.remove('hidden');
       
+      // Calculate total respect potential (only beatable targets)
+      const beatableTargets = SESSION.rawData.filter(t => t.winChance >= 50);
+      const totalRespect = beatableTargets.reduce((sum, t) => sum + t.respect, 0);
+      const totalTargets = SESSION.rawData.length;
+      const beatableCount = beatableTargets.length;
+      
       // Category breakdown
       document.getElementById('categoryBreakdown').innerHTML = \`
         <div><span class="label">🟠 Safe</span><div style="color: var(--amber); font-size: 24px; font-weight: 700;">\${SESSION.counts.amber}</div></div>
         <div><span class="label">🟢 Prime</span><div style="color: var(--green); font-size: 24px; font-weight: 700;">\${SESSION.counts.green}</div></div>
         <div><span class="label">🔵 Risky</span><div style="color: var(--blue); font-size: 24px; font-weight: 700;">\${SESSION.counts.blue}</div></div>
         <div><span class="label">🔴 Avoid</span><div style="color: var(--red); font-size: 24px; font-weight: 700;">\${SESSION.counts.red}</div></div>
+        <div style="border-left: 2px solid var(--border); padding-left: 15px;">
+          <span class="label">Potential Respect</span>
+          <div style="color: var(--green); font-size: 24px; font-weight: 700;">\${totalRespect.toLocaleString()}</div>
+          <span class="label" style="margin-top: 4px; display: block;">\${beatableCount}/\${totalTargets} Beatable</span>
+        </div>
       \`;
       
       // Display targets
+      displayTargets();
+    }
+    
+    function displayTargets(sortBy = 'respect', filterTier = 'all') {
+      let targets = [...SESSION.rawData];
+      
+      // Filter by tier
+      if (filterTier !== 'all') {
+        targets = targets.filter(t => t.tier === filterTier);
+      }
+      
+      // Sort
+      switch(sortBy) {
+        case 'respect':
+          targets.sort((a, b) => b.respect - a.respect);
+          break;
+        case 'winChance':
+          targets.sort((a, b) => b.winChance - a.winChance);
+          break;
+        case 'ff':
+          targets.sort((a, b) => b.ff - a.ff);
+          break;
+        case 'level':
+          targets.sort((a, b) => b.m.level - a.m.level);
+          break;
+        case 'name':
+          targets.sort((a, b) => a.m.name.localeCompare(b.m.name));
+          break;
+      }
+      
       const grid = document.getElementById('targetGrid');
       grid.innerHTML = '';
       
-      SESSION.rawData.forEach(obj => {
+      targets.forEach(obj => {
         const card = document.createElement('div');
         card.className = \`target-card \${obj.tier}\`;
         card.innerHTML = \`
@@ -679,32 +786,130 @@ function getUI() {
           </div>
           <div class="stat-row">
             <div><span class="label">Win Chance</span><div style="color: var(--\${obj.tier}); font-size: 20px; font-weight: 700;">\${obj.winChance}%</div></div>
-            <div><span class="label">Verdict</span><div style="font-size: 11px; font-weight: 600;">\${obj.verdict}</div></div>
+            <div><span class="label">Respect</span><div style="color: var(--green); font-size: 18px; font-weight: 700;">\${obj.respect}</div></div>
           </div>
           <div class="stat-row" style="margin-top: 8px;">
-            <div><span class="label">\${obj.dataLabel}</span><div style="font-size: 13px;">\${formatStats(obj.total)}</div></div>
-            <div><span class="label">Level</span><div style="font-size: 13px;">\${obj.m.level}</div></div>
+            <div><span class="label">Verdict</span><div style="font-size: 11px; font-weight: 600;">\${obj.verdict}</div></div>
+            <div><span class="label">Resp/E</span><div style="font-size: 11px;">\${obj.respectPerEnergy}</div></div>
           </div>
         \`;
         card.onclick = () => showDetail(obj);
-        grid.prepend(card);
+        grid.appendChild(card);
       });
     }
     
     function showDetail(obj) {
-      alert(\`
-\${obj.m.name}
-
-Win Chance: \${obj.winChance}%
-Verdict: \${obj.verdict}
-Fair Fight: \${obj.ff.toFixed(2)}x
-Stat Ratio: \${obj.statRatio.toFixed(2)}x
-
-Analysis:
-\${obj.reasoning}
-
-Attack: https://www.torn.com/loader.php?sid=attack&user2ID=\${obj.id}
-      \`);
+      const modal = document.getElementById('targetModal');
+      const modalBg = document.getElementById('modalBg');
+      const content = document.getElementById('modalContent');
+      
+      content.innerHTML = \`
+        <h2 style="font-family: Orbitron; color: var(--\${obj.tier}); margin-bottom: 20px;">\${obj.m.name}</h2>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+          <div style="background: #111; padding: 15px; border-radius: 15px;">
+            <span class="label">Win Chance</span>
+            <div style="font-size: 32px; font-weight: 700; color: var(--\${obj.tier});">\${obj.winChance}%</div>
+          </div>
+          <div style="background: #111; padding: 15px; border-radius: 15px;">
+            <span class="label">Respect Value</span>
+            <div style="font-size: 32px; font-weight: 700; color: var(--green);">\${obj.respect}</div>
+          </div>
+          <div style="background: #111; padding: 15px; border-radius: 15px;">
+            <span class="label">Fair Fight</span>
+            <div style="font-size: 24px; font-weight: 700;">\${obj.ff.toFixed(2)}x</div>
+          </div>
+          <div style="background: #111; padding: 15px; border-radius: 15px;">
+            <span class="label">Stat Ratio</span>
+            <div style="font-size: 24px; font-weight: 700;">\${obj.statRatio.toFixed(2)}x</div>
+          </div>
+        </div>
+        
+        <div style="background: #111; padding: 15px; border-radius: 15px; margin-bottom: 20px;">
+          <span class="label">Verdict</span>
+          <div style="font-size: 20px; font-weight: 700; color: var(--\${obj.tier}); margin-bottom: 10px;">\${obj.verdict}</div>
+          <p style="line-height: 1.6; color: #ccc;">\${obj.reasoning}</p>
+        </div>
+        
+        <div style="background: #111; padding: 15px; border-radius: 15px; margin-bottom: 20px;">
+          <span class="label">Combat Stats</span>
+          <div style="margin-top: 10px;">
+            <div class="stat-row">
+              <span>Est. Power:</span>
+              <span style="font-weight: 600;">\${formatStats(obj.total)}</span>
+            </div>
+            <div class="stat-row">
+              <span>Level:</span>
+              <span style="font-weight: 600;">\${obj.m.level}</span>
+            </div>
+            <div class="stat-row">
+              <span>Respect/Energy:</span>
+              <span style="font-weight: 600;">\${obj.respectPerEnergy}</span>
+            </div>
+          </div>
+        </div>
+        
+        <a href="https://www.torn.com/loader.php?sid=attack&user2ID=\${obj.id}" target="_blank" style="display: block; text-align: center; padding: 15px; background: var(--green); color: #000; font-weight: 700; border-radius: 20px; text-decoration: none; font-size: 16px;">
+          ⚔️ ATTACK NOW
+        </a>
+      \`;
+      
+      modal.style.display = 'block';
+      modalBg.style.display = 'block';
+    }
+    
+    function closeModal() {
+      document.getElementById('targetModal').style.display = 'none';
+      document.getElementById('modalBg').style.display = 'none';
+    }
+    
+    let warTimerInterval = null;
+    
+    function startWarTimer() {
+      const warTimeInput = document.getElementById('warTime').value;
+      if (!warTimeInput) {
+        alert('Please select a war start time');
+        return;
+      }
+      
+      const warTime = new Date(warTimeInput).getTime();
+      document.getElementById('timerDisplay').style.display = 'block';
+      
+      if (warTimerInterval) clearInterval(warTimerInterval);
+      
+      warTimerInterval = setInterval(() => {
+        const now = Date.now();
+        const diff = warTime - now;
+        
+        if (diff <= 0) {
+          document.getElementById('countdown').textContent = 'WAR STARTED!';
+          document.getElementById('xanaxAdvice').innerHTML = '<strong style="color: var(--red);">⚔️ WAR IS LIVE!</strong>';
+          clearInterval(warTimerInterval);
+          return;
+        }
+        
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        
+        document.getElementById('countdown').textContent = \`\${hours}h \${minutes}m \${seconds}s\`;
+        
+        // Xanax advice
+        const hoursUntil = diff / (1000 * 60 * 60);
+        let advice = '';
+        
+        if (hoursUntil > 5) {
+          advice = \`💊 Take Xanax in <strong>\${(hoursUntil - 5).toFixed(1)} hours</strong> (5 hours before war)\`;
+        } else if (hoursUntil > 1) {
+          advice = '<strong style="color: var(--amber);">💊 TAKE XANAX NOW!</strong> You have ' + hoursUntil.toFixed(1) + ' hours to reach 1000E';
+        } else if (hoursUntil > 0.25) {
+          advice = '<strong style="color: var(--red);">⚡ FINAL PREP!</strong> Stack energy now!';
+        } else {
+          advice = '<strong style="color: var(--red);">🔥 WAR STARTING SOON!</strong>';
+        }
+        
+        document.getElementById('xanaxAdvice').innerHTML = advice;
+      }, 1000);
     }
     
     function formatStats(num) {
