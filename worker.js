@@ -407,6 +407,63 @@ function getUI() {
       await startScan(factionData.members);
     }
     
+    function calculateWinProbability(myStats, enemyStats, fairFight) {
+      // Handle edge cases
+      if (!myStats || !enemyStats || enemyStats === 0) {
+        return {
+          winChance: 0,
+          verdict: 'NO DATA',
+          reasoning: 'Insufficient data to calculate',
+          statRatio: 0
+        };
+      }
+      
+      // Apply FF multiplier to your stats
+      const effectiveMyStats = myStats * fairFight;
+      const statRatio = effectiveMyStats / enemyStats;
+      
+      // Calculate win probability based on stat ratio
+      let winChance;
+      if (statRatio >= 3.0) winChance = 98;
+      else if (statRatio >= 2.0) winChance = 95;
+      else if (statRatio >= 1.5) winChance = 85;
+      else if (statRatio >= 1.2) winChance = 70;
+      else if (statRatio >= 1.0) winChance = 55;
+      else if (statRatio >= 0.8) winChance = 35;
+      else if (statRatio >= 0.6) winChance = 20;
+      else winChance = 10;
+      
+      // Determine verdict
+      let verdict;
+      if (winChance >= 85) verdict = 'DOMINANT';
+      else if (winChance >= 65) verdict = 'FAVORABLE';
+      else if (winChance >= 45) verdict = 'RISKY';
+      else verdict = 'AVOID';
+      
+      // Generate reasoning
+      const myStatsB = (myStats / 1e9).toFixed(2);
+      const effectiveB = (effectiveMyStats / 1e9).toFixed(2);
+      const enemyStatsB = (enemyStats / 1e9).toFixed(2);
+      const advantage = ((statRatio - 1) * 100).toFixed(0);
+      
+      let reasoning;
+      if (statRatio >= 1.2) {
+        reasoning = \`Strong position: Your \${myStatsB}B × \${fairFight.toFixed(2)}x FF = \${effectiveB}B effective vs their \${enemyStatsB}B. You have \${advantage}% advantage for \${winChance}% win chance.\`;
+      } else if (statRatio >= 0.9) {
+        reasoning = \`Close fight: \${effectiveB}B effective vs \${enemyStatsB}B. Only \${advantage}% edge. Use boosters for safety. \${winChance}% win chance.\`;
+      } else {
+        const disadvantage = ((1 - statRatio) * 100).toFixed(0);
+        reasoning = \`Dangerous: You're \${disadvantage}% weaker even with \${fairFight.toFixed(2)}x FF. Only \${winChance}% win chance. High hospitalization risk.\`;
+      }
+      
+      return {
+        winChance,
+        verdict,
+        reasoning,
+        statRatio
+      };
+    }
+    
     async function startScan(members) {
       SESSION.rawData = [];
       SESSION.counts = { amber: 0, green: 0, blue: 0, red: 0 };
@@ -416,6 +473,8 @@ function getUI() {
       
       // Fetch spy database ONCE
       let spyDb = {};
+      // DISABLED FOR NOW - will revisit spy DB integration later
+      /*
       try {
         const spyRes = await fetch('/spy');
         const spyData = await spyRes.json();
@@ -443,6 +502,7 @@ function getUI() {
       } catch (e) {
         console.error('Spy database error:', e);
       }
+      */
       
       const CHUNK = 100;
       
@@ -467,28 +527,11 @@ function getUI() {
           const ff = Number(scDatum.fair_fight) || 1.0;
           let dataLabel = 'Est. Power';
           
-          console.log(\`Processing: \${member.name} (ID: \${member.id})\`);
-          console.log(\`  FF Scouter: total=\${total}, ff=\${ff}\`);
+          // Spy DB disabled for now - will revisit later
+          // All targets use FF Scouter data only
           
-          // Check spy database locally (already loaded)
-          if (spyDb[member.id] && spyDb[member.id].stats) {
-            const spy = spyDb[member.id];
-            const spyTotal = (spy.stats.strength || 0) + (spy.stats.defense || 0) + 
-                            (spy.stats.speed || 0) + (spy.stats.dexterity || 0);
-            
-            console.log(\`  Spy DB: total=\${spyTotal}\`);
-            
-            // Use spy data if HIGHER
-            if (spyTotal > total) {
-              total = spyTotal;
-              dataLabel = 'Actual Power';
-              console.log(\`  ✓ Using SPY data (higher)\`);
-            } else {
-              console.log(\`  ✓ Using FF Scouter (higher or equal)\`);
-            }
-          } else {
-            console.log(\`  No spy data found\`);
-          }
+          // Calculate win probability
+          const analysis = calculateWinProbability(SESSION.myStats, total, ff);
           
           // Determine tier (custom ranges)
           let tier;
@@ -503,7 +546,11 @@ function getUI() {
             total: total,
             ff: ff,
             tier: tier,
-            dataLabel: dataLabel
+            dataLabel: dataLabel,
+            winChance: analysis.winChance,
+            verdict: analysis.verdict,
+            reasoning: analysis.reasoning,
+            statRatio: analysis.statRatio
           };
           
           SESSION.rawData.push(obj);
@@ -539,8 +586,12 @@ function getUI() {
             <div style="color: var(--\${obj.tier}); font-weight: 700; font-size: 18px;">\${obj.ff.toFixed(2)}x</div>
           </div>
           <div class="stat-row">
-            <div><span class="label">\${obj.dataLabel}</span><div>\${formatStats(obj.total)}</div></div>
-            <div><span class="label">Level</span><div>\${obj.m.level}</div></div>
+            <div><span class="label">Win Chance</span><div style="color: var(--\${obj.tier}); font-size: 20px; font-weight: 700;">\${obj.winChance}%</div></div>
+            <div><span class="label">Verdict</span><div style="font-size: 11px; font-weight: 600;">\${obj.verdict}</div></div>
+          </div>
+          <div class="stat-row" style="margin-top: 8px;">
+            <div><span class="label">\${obj.dataLabel}</span><div style="font-size: 13px;">\${formatStats(obj.total)}</div></div>
+            <div><span class="label">Level</span><div style="font-size: 13px;">\${obj.m.level}</div></div>
           </div>
         \`;
         card.onclick = () => showDetail(obj);
@@ -549,17 +600,16 @@ function getUI() {
     }
     
     function showDetail(obj) {
-      const ratio = SESSION.myStats / (obj.total || 1);
-      const advice = ratio > 1.5 ? "DOMINANT" : ratio > 0.9 ? "FAVORABLE" : "HIGH RISK";
-      
       alert(\`
 \${obj.m.name}
 
-FF Multiplier: \${obj.ff.toFixed(2)}x
-Est. Power: \${formatStats(obj.total)}
-Tier: \${obj.tier.toUpperCase()}
+Win Chance: \${obj.winChance}%
+Verdict: \${obj.verdict}
+Fair Fight: \${obj.ff.toFixed(2)}x
+Stat Ratio: \${obj.statRatio.toFixed(2)}x
 
-Your Advantage: \${advice}
+Analysis:
+\${obj.reasoning}
 
 Attack: https://www.torn.com/loader.php?sid=attack&user2ID=\${obj.id}
       \`);
