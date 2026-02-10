@@ -327,6 +327,10 @@ function getUI() {
           <div><span class="label">Name</span><div id="userName">-</div></div>
           <div><span class="label">Total Stats</span><div id="userTotal" style="color: var(--green); font-size: 24px; font-weight: 700;">-</div></div>
         </div>
+        <div style="margin-top: 15px;">
+          <span class="label">Target Faction</span>
+          <div id="factionName" style="color: var(--amber); font-size: 18px; font-weight: 600;">-</div>
+        </div>
       </div>
       
       <div class="card">
@@ -393,6 +397,9 @@ function getUI() {
         document.getElementById('initStatus').innerHTML = '';
         return;
       }
+      
+      // Display faction name
+      document.getElementById('factionName').textContent = factionData.name || 'Unknown Faction';
       
       // Step 3: Analyze targets in batches
       document.getElementById('initStatus').innerHTML = \`<div class="loading">⏳ Analyzing \${factionData.members.length} targets...</div>\`;
