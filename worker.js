@@ -448,22 +448,27 @@ function getUI() {
           const ff = Number(scDatum.fair_fight) || 1.0;
           let dataLabel = 'Est. Power';
           
+          console.log(\`Processing: \${member.name} (ID: \${member.id})\`);
+          console.log(\`  FF Scouter: total=\${total}, ff=\${ff}\`);
+          
           // Check spy database locally (already loaded)
           if (spyDb[member.id] && spyDb[member.id].stats) {
             const spy = spyDb[member.id];
             const spyTotal = (spy.stats.strength || 0) + (spy.stats.defense || 0) + 
                             (spy.stats.speed || 0) + (spy.stats.dexterity || 0);
             
-            console.log(\`Target \${member.name}: FF=\${total}, Spy=\${spyTotal}\`);
+            console.log(\`  Spy DB: total=\${spyTotal}\`);
             
             // Use spy data if HIGHER
             if (spyTotal > total) {
               total = spyTotal;
               dataLabel = 'Actual Power';
-              console.log(\`  → Using SPY data (higher)\`);
+              console.log(\`  ✓ Using SPY data (higher)\`);
             } else {
-              console.log(\`  → Using FF Scouter (higher)\`);
+              console.log(\`  ✓ Using FF Scouter (higher or equal)\`);
             }
+          } else {
+            console.log(\`  No spy data found\`);
           }
           
           // Determine tier (custom ranges)
