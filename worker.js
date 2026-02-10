@@ -431,10 +431,10 @@ function getUI() {
           
           // Determine tier
           let tier;
-          if (ff < 3.2) tier = 'amber';
-          else if (ff < 4.7) tier = 'green';
-          else if (ff < 5.3) tier = 'blue';
-          else tier = 'red';
+          if (ff < 1.8) tier = 'red';        // Avoid - too low FF
+          else if (ff < 4.2) tier = 'green'; // Prime targets
+          else if (ff < 5.2) tier = 'amber'; // Safe targets
+          else tier = 'blue';                // Risky - high FF
           
           const obj = {
             m: member,
@@ -458,8 +458,8 @@ function getUI() {
       
       // Category breakdown
       document.getElementById('categoryBreakdown').innerHTML = \`
-        <div><span class="label">🟢 Safe</span><div style="color: var(--green); font-size: 24px; font-weight: 700;">\${SESSION.counts.green}</div></div>
-        <div><span class="label">🟠 Prime</span><div style="color: var(--amber); font-size: 24px; font-weight: 700;">\${SESSION.counts.amber}</div></div>
+        <div><span class="label">🟠 Safe</span><div style="color: var(--amber); font-size: 24px; font-weight: 700;">\${SESSION.counts.amber}</div></div>
+        <div><span class="label">🟢 Prime</span><div style="color: var(--green); font-size: 24px; font-weight: 700;">\${SESSION.counts.green}</div></div>
         <div><span class="label">🔵 Risky</span><div style="color: var(--blue); font-size: 24px; font-weight: 700;">\${SESSION.counts.blue}</div></div>
         <div><span class="label">🔴 Avoid</span><div style="color: var(--red); font-size: 24px; font-weight: 700;">\${SESSION.counts.red}</div></div>
       \`;
