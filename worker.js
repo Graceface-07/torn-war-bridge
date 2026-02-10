@@ -82,12 +82,16 @@ async function getUserStats(request, env, corsHeaders) {
   const { uid } = await request.json();
   
   try {
-    // Torn API with SC_KEY
+    // Use the SC_KEY (rwLgZTyqgWDxhoCx) which works
     const tornUrl = `https://api.torn.com/user/${uid}?selections=profile,battlestats&key=${SC_KEY}`;
     const response = await fetch(tornUrl);
     const data = await response.json();
     
+    console.log('Torn API response keys:', Object.keys(data));
+    console.log('Total:', data.total);
+    
     if (data.error) {
+      console.error('Torn API error:', data.error);
       return jsonResponse({ 
         error: 'Torn API Error',
         name: 'API ERROR',
@@ -97,11 +101,32 @@ async function getUserStats(request, env, corsHeaders) {
       }, corsHeaders);
     }
     
+    // Calculate effective stats from individual stats with modifiers
+    let totalEffective = Number(data.total) || 0;
+    
+    // If we have individual stats, calculate with modifiers
+    if (data.strength !== undefined) {
+      const strMod = (data.strength_modifier || 0) / 100;
+      const defMod = (data.defense_modifier || 0) / 100;
+      const spdMod = (data.speed_modifier || 0) / 100;
+      const dexMod = (data.dexterity_modifier || 0) / 100;
+      
+      const str = (data.strength || 0) * (1 + strMod);
+      const def = (data.defense || 0) * (1 + defMod);
+      const spd = (data.speed || 0) * (1 + spdMod);
+      const dex = (data.dexterity || 0) * (1 + dexMod);
+      
+      totalEffective = Math.floor(str + def + spd + dex);
+      
+      console.log('Calculated effective:', totalEffective);
+      console.log('Base total:', data.total);
+    }
+    
     return jsonResponse({
       success: true,
       name: (data.name || 'OPERATOR').toUpperCase(),
-      total: Number(data.total) || 0,  // Base total
-      totalEffective: Number(data.total_battlestats) || Number(data.total) || 0  // Effective (with bonuses)
+      total: Number(data.total) || 0,
+      totalEffective: totalEffective
     }, corsHeaders);
     
   } catch (error) {
