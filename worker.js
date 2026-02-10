@@ -407,6 +407,17 @@ function getUI() {
       // Filter out the user's own ID
       const enemies = members.filter(m => m.id !== SESSION.uid);
       
+      // Fetch spy database ONCE
+      let spyDb = {};
+      try {
+        const spyRes = await fetch('/spy');
+        const spyData = await spyRes.json();
+        spyDb = spyData.spies || {};
+        console.log('Loaded spy database:', Object.keys(spyDb).length, 'entries');
+      } catch (e) {
+        console.log('Could not load spy database');
+      }
+      
       const CHUNK = 100;
       
       for (let i = 0; i < enemies.length; i += CHUNK) {
@@ -430,26 +441,17 @@ function getUI() {
           const ff = Number(scDatum.fair_fight) || 1.0;
           let dataLabel = 'Est. Power';
           
-          // Check spy database - use if HIGHER than FF Scouter
-          try {
-            const spyRes = await fetch(\`/spy\`);
-            const spyDb = await spyRes.json();
+          // Check spy database locally (already loaded)
+          if (spyDb[member.id] && spyDb[member.id].stats) {
+            const spy = spyDb[member.id];
+            const spyTotal = (spy.stats.strength || 0) + (spy.stats.defense || 0) + 
+                            (spy.stats.speed || 0) + (spy.stats.dexterity || 0);
             
-            if (spyDb.spies && spyDb.spies[member.id]) {
-              const spy = spyDb.spies[member.id];
-              if (spy.stats) {
-                const spyTotal = (spy.stats.strength || 0) + (spy.stats.defense || 0) + 
-                                (spy.stats.speed || 0) + (spy.stats.dexterity || 0);
-                
-                // Use spy data if HIGHER
-                if (spyTotal > total) {
-                  total = spyTotal;
-                  dataLabel = 'Actual Power';
-                }
-              }
+            // Use spy data if HIGHER
+            if (spyTotal > total) {
+              total = spyTotal;
+              dataLabel = 'Actual Power';
             }
-          } catch (e) {
-            console.log('Spy check failed for', member.id);
           }
           
           // Determine tier (custom ranges)
