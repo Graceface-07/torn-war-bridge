@@ -428,9 +428,29 @@ function getUI() {
           
           let total = Number(scDatum.bs_estimate) || 0;
           const ff = Number(scDatum.fair_fight) || 1.0;
+          let dataLabel = 'Est. Power';
           
           // Check spy database - use if HIGHER than FF Scouter
-          // TODO: Implement spy check
+          try {
+            const spyRes = await fetch(\`/spy\`);
+            const spyDb = await spyRes.json();
+            
+            if (spyDb.spies && spyDb.spies[member.id]) {
+              const spy = spyDb.spies[member.id];
+              if (spy.stats) {
+                const spyTotal = (spy.stats.strength || 0) + (spy.stats.defense || 0) + 
+                                (spy.stats.speed || 0) + (spy.stats.dexterity || 0);
+                
+                // Use spy data if HIGHER
+                if (spyTotal > total) {
+                  total = spyTotal;
+                  dataLabel = 'Actual Power';
+                }
+              }
+            }
+          } catch (e) {
+            console.log('Spy check failed for', member.id);
+          }
           
           // Determine tier (custom ranges)
           let tier;
@@ -444,7 +464,8 @@ function getUI() {
             id: member.id,
             total: total,
             ff: ff,
-            tier: tier
+            tier: tier,
+            dataLabel: dataLabel
           };
           
           SESSION.rawData.push(obj);
@@ -480,7 +501,7 @@ function getUI() {
             <div style="color: var(--\${obj.tier}); font-weight: 700; font-size: 18px;">\${obj.ff.toFixed(2)}x</div>
           </div>
           <div class="stat-row">
-            <div><span class="label">Est. Power</span><div>\${formatStats(obj.total)}</div></div>
+            <div><span class="label">\${obj.dataLabel}</span><div>\${formatStats(obj.total)}</div></div>
             <div><span class="label">Level</span><div>\${obj.m.level}</div></div>
           </div>
         \`;
