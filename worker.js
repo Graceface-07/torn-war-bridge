@@ -404,10 +404,13 @@ function getUI() {
       SESSION.rawData = [];
       SESSION.counts = { amber: 0, green: 0, blue: 0, red: 0 };
       
+      // Filter out the user's own ID
+      const enemies = members.filter(m => m.id !== SESSION.uid);
+      
       const CHUNK = 100;
       
-      for (let i = 0; i < members.length; i += CHUNK) {
-        const chunk = members.slice(i, i + CHUNK);
+      for (let i = 0; i < enemies.length; i += CHUNK) {
+        const chunk = enemies.slice(i, i + CHUNK);
         const chunkCsv = chunk.map(m => m.id).join(',');
         
         // Get FF Scouter data for chunk
@@ -431,10 +434,10 @@ function getUI() {
           
           // Determine tier (custom ranges)
           let tier;
-          if (ff < 1.8) tier = 'red';        // Avoid - too low
+          if (ff < 1.8) tier = 'amber';      // Safe - too low FF
           else if (ff < 4.2) tier = 'green'; // Prime
-          else if (ff < 5.2) tier = 'amber'; // Safe
-          else tier = 'blue';                // Risky - very high
+          else if (ff < 5.2) tier = 'blue';  // Risky
+          else tier = 'red';                 // Avoid - too high
           
           const obj = {
             m: member,
