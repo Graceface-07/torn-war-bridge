@@ -92,6 +92,7 @@ async function getUserStats(request, env, corsHeaders) {
         error: 'Torn API Error',
         name: 'API ERROR',
         total: 0,
+        totalEffective: 0,
         errCode: data.error.code
       }, corsHeaders);
     }
@@ -99,7 +100,8 @@ async function getUserStats(request, env, corsHeaders) {
     return jsonResponse({
       success: true,
       name: (data.name || 'OPERATOR').toUpperCase(),
-      total: Number(data.total) || 0
+      total: Number(data.total) || 0,  // Base total
+      totalEffective: Number(data.total_battlestats) || Number(data.total) || 0  // Effective (with bonuses)
     }, corsHeaders);
     
   } catch (error) {
@@ -108,6 +110,7 @@ async function getUserStats(request, env, corsHeaders) {
       error: 'Fetch failed',
       name: 'FETCH FAIL',
       total: 0,
+      totalEffective: 0,
       errCode: 'SYSTEM'
     }, corsHeaders, 500);
   }
@@ -395,12 +398,12 @@ function getUI() {
         return;
       }
       
-      SESSION.myTornStats = userData.total;
-      SESSION.myFFStats = userData.total; // For now, using same - will add FF Scouter fetch later
+      SESSION.myTornStats = userData.totalEffective || userData.total; // Use effective (with bonuses)
+      SESSION.myFFStats = 70000000; // TODO: Fetch from FF Scouter API for this user
       
       document.getElementById('userName').textContent = userData.name;
-      document.getElementById('userTotal').textContent = formatStats(userData.total);
-      document.getElementById('activeStatsValue').textContent = formatStats(userData.total) + ' (Torn)';
+      document.getElementById('userTotal').textContent = formatStats(userData.totalEffective || userData.total);
+      document.getElementById('activeStatsValue').textContent = formatStats(SESSION.myTornStats) + ' (Torn)';
       
       // Step 2: Get faction roster
       document.getElementById('initStatus').innerHTML = '<div class="loading">⏳ Scanning faction...</div>';
