@@ -454,10 +454,15 @@ function getUI() {
             const spyTotal = (spy.stats.strength || 0) + (spy.stats.defense || 0) + 
                             (spy.stats.speed || 0) + (spy.stats.dexterity || 0);
             
+            console.log(\`Target \${member.name}: FF=\${total}, Spy=\${spyTotal}\`);
+            
             // Use spy data if HIGHER
             if (spyTotal > total) {
               total = spyTotal;
               dataLabel = 'Actual Power';
+              console.log(\`  → Using SPY data (higher)\`);
+            } else {
+              console.log(\`  → Using FF Scouter (higher)\`);
             }
           }
           
