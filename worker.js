@@ -418,9 +418,9 @@ function getUI() {
         };
       }
       
-      // Apply FF multiplier to your stats
-      const effectiveMyStats = myStats * fairFight;
-      const statRatio = effectiveMyStats / enemyStats;
+      // FF multiplier does NOT affect combat - it only affects respect!
+      // Direct stat comparison only
+      const statRatio = myStats / enemyStats;
       
       // Calculate win probability based on stat ratio
       let winChance;
@@ -442,18 +442,17 @@ function getUI() {
       
       // Generate reasoning
       const myStatsB = (myStats / 1e9).toFixed(2);
-      const effectiveB = (effectiveMyStats / 1e9).toFixed(2);
       const enemyStatsB = (enemyStats / 1e9).toFixed(2);
       const advantage = ((statRatio - 1) * 100).toFixed(0);
       
       let reasoning;
       if (statRatio >= 1.2) {
-        reasoning = \`Strong position: Your \${myStatsB}B × \${fairFight.toFixed(2)}x FF = \${effectiveB}B effective vs their \${enemyStatsB}B. You have \${advantage}% advantage for \${winChance}% win chance.\`;
+        reasoning = \`Strong position: Your \${myStatsB}B vs their \${enemyStatsB}B. You have \${advantage}% stat advantage for \${winChance}% win chance. FF \${fairFight.toFixed(2)}x affects respect only, not combat.\`;
       } else if (statRatio >= 0.9) {
-        reasoning = \`Close fight: \${effectiveB}B effective vs \${enemyStatsB}B. Only \${advantage}% edge. Use boosters for safety. \${winChance}% win chance.\`;
+        reasoning = \`Close fight: \${myStatsB}B vs \${enemyStatsB}B. Only \${Math.abs(advantage)}% difference. Use boosters for safety. \${winChance}% win chance.\`;
       } else {
         const disadvantage = ((1 - statRatio) * 100).toFixed(0);
-        reasoning = \`Dangerous: You're \${disadvantage}% weaker even with \${fairFight.toFixed(2)}x FF. Only \${winChance}% win chance. High hospitalization risk.\`;
+        reasoning = \`Dangerous: You're \${disadvantage}% weaker (\${myStatsB}B vs \${enemyStatsB}B). Only \${winChance}% win chance. High hospitalization risk. FF \${fairFight.toFixed(2)}x means high respect if you win.\`;
       }
       
       return {
