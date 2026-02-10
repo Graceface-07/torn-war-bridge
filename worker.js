@@ -419,7 +419,21 @@ function getUI() {
       try {
         const spyRes = await fetch('/spy');
         const spyData = await spyRes.json();
-        spyDb = spyData.spies || {};
+        
+        // Rebuild: use player_id as key instead of index
+        Object.values(spyData.spies || {}).forEach(spy => {
+          if (spy.player_id) {
+            spyDb[spy.player_id] = {
+              stats: {
+                strength: spy.strength || 0,
+                defense: spy.defense || 0,
+                speed: spy.speed || 0,
+                dexterity: spy.dexterity || 0
+              }
+            };
+          }
+        });
+        
         console.log('Loaded spy database:', Object.keys(spyDb).length, 'entries');
       } catch (e) {
         console.log('Could not load spy database');
