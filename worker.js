@@ -331,6 +331,21 @@ function getUI() {
           <span class="label">Target Faction</span>
           <div id="factionName" style="color: var(--amber); font-size: 18px; font-weight: 600;">-</div>
         </div>
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border);">
+          <span class="label">Stat Source for Calculations</span>
+          <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button id="useTornStats" onclick="switchStatSource('torn')" style="flex: 1; padding: 12px; border-radius: 20px; border: 2px solid var(--green); background: var(--green); color: #000; font-weight: 700; cursor: pointer;">
+              Torn Stats (True)
+            </button>
+            <button id="useFFStats" onclick="switchStatSource('ff')" style="flex: 1; padding: 12px; border-radius: 20px; border: 2px solid var(--border); background: transparent; color: #888; font-weight: 700; cursor: pointer;">
+              FF Scouter (Est)
+            </button>
+          </div>
+          <div id="activeStatsDisplay" style="margin-top: 10px; padding: 10px; background: #111; border-radius: 15px; text-align: center;">
+            <span class="label">Using</span>
+            <div id="activeStatsValue" style="color: var(--green); font-size: 20px; font-weight: 700;">-</div>
+          </div>
+        </div>
       </div>
       
       <div class="card">
@@ -345,7 +360,9 @@ function getUI() {
     let SESSION = {
       uid: null,
       fid: null,
-      myStats: 0,
+      myTornStats: 0,
+      myFFStats: 0,
+      activeStatSource: 'torn', // 'torn' or 'ff'
       rawData: [],
       counts: { amber: 0, green: 0, blue: 0, red: 0 }
     };
@@ -378,9 +395,12 @@ function getUI() {
         return;
       }
       
-      SESSION.myStats = userData.total;
+      SESSION.myTornStats = userData.total;
+      SESSION.myFFStats = userData.total; // For now, using same - will add FF Scouter fetch later
+      
       document.getElementById('userName').textContent = userData.name;
       document.getElementById('userTotal').textContent = formatStats(userData.total);
+      document.getElementById('activeStatsValue').textContent = formatStats(userData.total) + ' (Torn)';
       
       // Step 2: Get faction roster
       document.getElementById('initStatus').innerHTML = '<div class="loading">⏳ Scanning faction...</div>';
@@ -405,6 +425,50 @@ function getUI() {
       document.getElementById('initStatus').innerHTML = \`<div class="loading">⏳ Analyzing \${factionData.members.length} targets...</div>\`;
       
       await startScan(factionData.members);
+    }
+    
+    function switchStatSource(source) {
+      SESSION.activeStatSource = source;
+      
+      // Update button styles
+      if (source === 'torn') {
+        document.getElementById('useTornStats').style.background = 'var(--green)';
+        document.getElementById('useTornStats').style.color = '#000';
+        document.getElementById('useTornStats').style.borderColor = 'var(--green)';
+        document.getElementById('useFFStats').style.background = 'transparent';
+        document.getElementById('useFFStats').style.color = '#888';
+        document.getElementById('useFFStats').style.borderColor = 'var(--border)';
+        
+        document.getElementById('activeStatsValue').textContent = formatStats(SESSION.myTornStats) + ' (Torn)';
+      } else {
+        document.getElementById('useFFStats').style.background = 'var(--blue)';
+        document.getElementById('useFFStats').style.color = '#000';
+        document.getElementById('useFFStats').style.borderColor = 'var(--blue)';
+        document.getElementById('useTornStats').style.background = 'transparent';
+        document.getElementById('useTornStats').style.color = '#888';
+        document.getElementById('useTornStats').style.borderColor = 'var(--border)';
+        
+        document.getElementById('activeStatsValue').textContent = formatStats(SESSION.myFFStats) + ' (FF Est)';
+      }
+      
+      // Recalculate all targets with new stat source
+      recalculateAllTargets();
+    }
+    
+    function recalculateAllTargets() {
+      const myStats = SESSION.activeStatSource === 'torn' ? SESSION.myTornStats : SESSION.myFFStats;
+      
+      // Recalculate each target
+      SESSION.rawData.forEach(obj => {
+        const analysis = calculateWinProbability(myStats, obj.total, obj.ff);
+        obj.winChance = analysis.winChance;
+        obj.verdict = analysis.verdict;
+        obj.reasoning = analysis.reasoning;
+        obj.statRatio = analysis.statRatio;
+      });
+      
+      // Re-render
+      showDashboard();
     }
     
     function calculateWinProbability(myStats, enemyStats, fairFight) {
@@ -529,8 +593,9 @@ function getUI() {
           // Spy DB disabled for now - will revisit later
           // All targets use FF Scouter data only
           
-          // Calculate win probability
-          const analysis = calculateWinProbability(SESSION.myStats, total, ff);
+          // Calculate win probability using active stat source
+          const myStats = SESSION.activeStatSource === 'torn' ? SESSION.myTornStats : SESSION.myFFStats;
+          const analysis = calculateWinProbability(myStats, total, ff);
           
           // Determine tier (custom ranges)
           let tier;
