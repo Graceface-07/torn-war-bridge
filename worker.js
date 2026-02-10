@@ -420,23 +420,28 @@ function getUI() {
         const spyRes = await fetch('/spy');
         const spyData = await spyRes.json();
         
+        console.log('Raw spy data structure:', typeof spyData.spies);
+        
         // Rebuild: use player_id as key instead of index
-        Object.values(spyData.spies || {}).forEach(spy => {
-          if (spy.player_id) {
-            spyDb[spy.player_id] = {
-              stats: {
-                strength: spy.strength || 0,
-                defense: spy.defense || 0,
-                speed: spy.speed || 0,
-                dexterity: spy.dexterity || 0
-              }
-            };
-          }
-        });
+        if (spyData.spies && typeof spyData.spies === 'object') {
+          Object.values(spyData.spies).forEach(spy => {
+            if (spy && spy.player_id) {
+              spyDb[spy.player_id] = {
+                stats: {
+                  strength: Number(spy.strength) || 0,
+                  defense: Number(spy.defense) || 0,
+                  speed: Number(spy.speed) || 0,
+                  dexterity: Number(spy.dexterity) || 0
+                }
+              };
+            }
+          });
+        }
         
         console.log('Loaded spy database:', Object.keys(spyDb).length, 'entries');
+        console.log('Sample IDs:', Object.keys(spyDb).slice(0, 5));
       } catch (e) {
-        console.log('Could not load spy database');
+        console.error('Spy database error:', e);
       }
       
       const CHUNK = 100;
