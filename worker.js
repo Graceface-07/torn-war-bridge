@@ -955,13 +955,14 @@ async function initializeScan() {
     });
     const factionData = await factionRes.json();
     
-    document.getElementById('factionName').textContent = factionData.name;
-    
     await processTargets(factionData.members.filter(m => m.id !== uid));
     generateMonthlyTasks();
     
     document.getElementById('initScreen').style.display = 'none';
     document.getElementById('dashboardView').style.display = 'block';
+    
+    // Now populate elements (after dashboard is visible)
+    document.getElementById('factionName').textContent = factionData.name;
     
   } catch (error) {
     console.error('Init error:', error);
@@ -1108,6 +1109,9 @@ function updateDashboard() {
   const risky = SESSION.targets.filter(t => t.tier === 'blue' && t.winChance >= 50);
   const suicide = SESSION.targets.filter(t => t.tier === 'red');
   
+  // Category tile updates - only exist in Target Analysis view
+  // Will be populated when user clicks Target Analysis
+  /*
   document.getElementById('safeCount').textContent = safe.length;
   document.getElementById('safeSim').textContent = Math.min(safe.length, 20);
   document.getElementById('safeRespect').textContent = safe.reduce((s, t) => s + t.respect, 0).toFixed(1);
@@ -1124,6 +1128,7 @@ function updateDashboard() {
   document.getElementById('riskyAvg').textContent = risky.length > 0 ? (risky.reduce((s, t) => s + t.respect, 0) / risky.length).toFixed(2) : 0;
   
   document.getElementById('suicideCount').textContent = suicide.length;
+  */
   
   document.getElementById('memberCount').textContent = SESSION.stats.total;
   
@@ -1227,6 +1232,29 @@ function showTargetAnalysis() {
   document.getElementById('targetAnalysisView').style.display = 'block';
   document.getElementById('categoryView').style.display = 'none';
   document.getElementById('progressView').style.display = 'none';
+  
+  // Populate category tiles
+  const safe = SESSION.targets.filter(t => t.tier === 'amber' && t.winChance >= 50);
+  const prime = SESSION.targets.filter(t => t.tier === 'green' && t.winChance >= 50);
+  const risky = SESSION.targets.filter(t => t.tier === 'blue' && t.winChance >= 50);
+  const suicide = SESSION.targets.filter(t => t.tier === 'red');
+  
+  document.getElementById('safeCount').textContent = safe.length;
+  document.getElementById('safeSim').textContent = Math.min(safe.length, 20);
+  document.getElementById('safeRespect').textContent = safe.reduce((s, t) => s + t.respect, 0).toFixed(1);
+  document.getElementById('safeAvg').textContent = safe.length > 0 ? (safe.reduce((s, t) => s + t.respect, 0) / safe.length).toFixed(2) : 0;
+  
+  document.getElementById('primeCount').textContent = prime.length;
+  document.getElementById('primeSim').textContent = Math.min(prime.length, 20);
+  document.getElementById('primeRespect').textContent = prime.reduce((s, t) => s + t.respect, 0).toFixed(1);
+  document.getElementById('primeAvg').textContent = prime.length > 0 ? (prime.reduce((s, t) => s + t.respect, 0) / prime.length).toFixed(2) : 0;
+  
+  document.getElementById('riskyCount').textContent = risky.length;
+  document.getElementById('riskySim').textContent = Math.min(risky.length, 20);
+  document.getElementById('riskyRespect').textContent = risky.reduce((s, t) => s + t.respect, 0).toFixed(1);
+  document.getElementById('riskyAvg').textContent = risky.length > 0 ? (risky.reduce((s, t) => s + t.respect, 0) / risky.length).toFixed(2) : 0;
+  
+  document.getElementById('suicideCount').textContent = suicide.length;
 }
 
 function showCategory(tier) {
