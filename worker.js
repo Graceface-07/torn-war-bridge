@@ -964,7 +964,9 @@ async function initializeScan() {
     document.getElementById('dashboardView').style.display = 'block';
     
   } catch (error) {
-    document.getElementById('initStatus').innerHTML = '<div style="color: var(--red);">Error loading data</div>';
+    console.error('Init error:', error);
+    console.error('Error stack:', error.stack);
+    document.getElementById('initStatus').innerHTML = '<div style="color: var(--red);">Error: ' + error.message + '</div>';
   }
 }
 
