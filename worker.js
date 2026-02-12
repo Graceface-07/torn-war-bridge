@@ -649,7 +649,7 @@ function getHTML() {
       </div>
     </div>
     
-    <!-- MAIN GRID: MEMBERS LEFT, TILES RIGHT -->
+    <!-- MAIN GRID: MEMBERS LEFT, MODULES RIGHT -->
     <div style="display: grid; grid-template-columns: 1fr 500px; gap: 20px;">
       
       <!-- LEFT: MEMBER LIST -->
@@ -661,121 +661,66 @@ function getHTML() {
         <div id="memberList" style="max-height: 600px; overflow-y: auto;"></div>
       </div>
       
-      <!-- RIGHT: CATEGORY TILES -->
+      <!-- RIGHT: MODULE TILES -->
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: fit-content;">
         
-        <div class="module-card" onclick="showCategory('safe')" style="border-left: 3px solid var(--amber);">
-          <div class="module-header">
-            <div class="module-icon">✓</div>
-            <div class="module-title">Safe</div>
-          </div>
-          <div class="module-stats">
-            <div class="module-stat">
-              <div class="label">Targets</div>
-              <div class="value" style="color: var(--amber);" id="safeCount">0</div>
-            </div>
-            <div class="module-stat">
-              <div class="label">Sim Hits</div>
-              <div class="value" style="color: var(--amber);" id="safeSim">0</div>
-            </div>
-          </div>
-          <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);">
-            <div style="display: flex; justify-content: space-between; font-size: 11px;">
-              <span style="color: var(--text-dim);">Est. Resp</span>
-              <span style="font-weight: 700;" id="safeRespect">0</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px;">
-              <span style="color: var(--text-dim);">Avg/Hit</span>
-              <span style="font-weight: 700;" id="safeAvg">0</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="module-card" onclick="showCategory('prime')" style="border-left: 3px solid var(--green);">
+        <div class="module-card" onclick="showTargetAnalysis()" style="grid-column: 1 / -1; border-left: 3px solid var(--blue);">
           <div class="module-header">
             <div class="module-icon">🎯</div>
-            <div class="module-title">Prime</div>
+            <div class="module-title">Target Analysis</div>
+          </div>
+          <div class="module-desc">
+            Categorized targets by difficulty - Safe, Prime, Risky, Suicide
           </div>
           <div class="module-stats">
             <div class="module-stat">
-              <div class="label">Targets</div>
-              <div class="value" style="color: var(--green);" id="primeCount">0</div>
+              <div class="label">Beatable</div>
+              <div class="value" style="color: var(--green);" id="beatableMain">0</div>
             </div>
             <div class="module-stat">
-              <div class="label">Sim Hits</div>
-              <div class="value" style="color: var(--green);" id="primeSim">0</div>
-            </div>
-          </div>
-          <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);">
-            <div style="display: flex; justify-content: space-between; font-size: 11px;">
-              <span style="color: var(--text-dim);">Est. Resp</span>
-              <span style="font-weight: 700;" id="primeRespect">0</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px;">
-              <span style="color: var(--text-dim);">Avg/Hit</span>
-              <span style="font-weight: 700;" id="primeAvg">0</span>
+              <div class="label">Total Resp</div>
+              <div class="value" style="color: var(--cyan);" id="totalRespMain">0</div>
             </div>
           </div>
         </div>
         
-        <div class="module-card" onclick="showCategory('risky')" style="border-left: 3px solid var(--blue);">
+        <div class="module-card" onclick="alert('War Timer - Coming Soon')">
           <div class="module-header">
-            <div class="module-icon">⚠️</div>
-            <div class="module-title">Risky</div>
+            <div class="module-icon">⏱️</div>
+            <div class="module-title">War Timer</div>
           </div>
-          <div class="module-stats">
-            <div class="module-stat">
-              <div class="label">Targets</div>
-              <div class="value" style="color: var(--blue);" id="riskyCount">0</div>
-            </div>
-            <div class="module-stat">
-              <div class="label">Sim Hits</div>
-              <div class="value" style="color: var(--blue);" id="riskySim">0</div>
-            </div>
-          </div>
-          <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);">
-            <div style="display: flex; justify-content: space-between; font-size: 11px;">
-              <span style="color: var(--text-dim);">Est. Resp</span>
-              <span style="font-weight: 700;" id="riskyRespect">0</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px;">
-              <span style="color: var(--text-dim);">Avg/Hit</span>
-              <span style="font-weight: 700;" id="riskyAvg">0</span>
-            </div>
+          <div class="module-desc">
+            Xanax countdown and energy tracking
           </div>
         </div>
         
-        <div class="module-card" onclick="showCategory('suicide')" style="border-left: 3px solid var(--red);">
+        <div class="module-card" onclick="alert('Analytics - Coming Soon')">
           <div class="module-header">
-            <div class="module-icon">🚫</div>
-            <div class="module-title">Suicide</div>
+            <div class="module-icon">📊</div>
+            <div class="module-title">Analytics</div>
           </div>
-          <div class="module-stats">
-            <div class="module-stat">
-              <div class="label">Targets</div>
-              <div class="value" style="color: var(--red);" id="suicideCount">0</div>
-            </div>
-            <div class="module-stat">
-              <div class="label">Status</div>
-              <div class="value" style="font-size: 11px; color: var(--red);">NOT VIABLE</div>
-            </div>
+          <div class="module-desc">
+            Respect breakdown and efficiency metrics
           </div>
         </div>
         
-        <!-- MONTHLY PROGRESS -->
-        <div class="module-card" onclick="showProgress()" style="grid-column: 1 / -1; border-left: 3px solid var(--purple);">
+        <div class="module-card" onclick="alert('Battle Advice - Coming Soon')">
+          <div class="module-header">
+            <div class="module-icon">🎓</div>
+            <div class="module-title">Battle Advice</div>
+          </div>
+          <div class="module-desc">
+            Real-time tactical recommendations
+          </div>
+        </div>
+        
+        <div class="module-card" onclick="showProgress()">
           <div class="module-header">
             <div class="module-icon">📋</div>
             <div class="module-title">Monthly Progress</div>
           </div>
-          <div style="margin-top: 10px;">
-            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px;">
-              <span style="color: var(--text-dim);">Tasks Completed</span>
-              <span style="font-weight: 700;"><span id="tasksCompleted">0</span> / <span id="tasksTotal">0</span></span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" id="progressBarMain" style="width: 0%;"></div>
-            </div>
+          <div class="module-desc">
+            Track your improvement goals
           </div>
         </div>
         
@@ -785,9 +730,121 @@ function getHTML() {
     
   </div>
   
-  <!-- TARGET CATEGORY DRILL-DOWN -->
-  <div id="categoryView" class="drill-down">
+  <!-- TARGET ANALYSIS VIEW (SHOWS CATEGORY TILES) -->
+  <div id="targetAnalysisView" style="display: none;">
     <button class="back-btn" onclick="showDashboard()">← Back to Command Center</button>
+    <h2 class="section-title">Target Analysis</h2>
+    
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 24px;">
+      
+      <div class="module-card" onclick="showCategory('safe')" style="border-left: 3px solid var(--amber);">
+        <div class="module-header">
+          <div class="module-icon">✓</div>
+          <div class="module-title">Safe Targets</div>
+        </div>
+        <div class="module-desc">FF < 1.8 | Easy wins, low respect but guaranteed</div>
+        <div class="module-stats">
+          <div class="module-stat">
+            <div class="label">Targets</div>
+            <div class="value" style="color: var(--amber);" id="safeCount">0</div>
+          </div>
+          <div class="module-stat">
+            <div class="label">Sim Hits</div>
+            <div class="value" style="color: var(--amber);" id="safeSim">0</div>
+          </div>
+        </div>
+        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);">
+          <div style="display: flex; justify-content: space-between; font-size: 11px;">
+            <span style="color: var(--text-dim);">Est. Resp</span>
+            <span style="font-weight: 700;" id="safeRespect">0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px;">
+            <span style="color: var(--text-dim);">Avg/Hit</span>
+            <span style="font-weight: 700;" id="safeAvg">0</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="module-card" onclick="showCategory('prime')" style="border-left: 3px solid var(--green);">
+        <div class="module-header">
+          <div class="module-icon">🎯</div>
+          <div class="module-title">Prime Targets</div>
+        </div>
+        <div class="module-desc">FF 1.8-4.2 | Optimal targets - beatable + good respect</div>
+        <div class="module-stats">
+          <div class="module-stat">
+            <div class="label">Targets</div>
+            <div class="value" style="color: var(--green);" id="primeCount">0</div>
+          </div>
+          <div class="module-stat">
+            <div class="label">Sim Hits</div>
+            <div class="value" style="color: var(--green);" id="primeSim">0</div>
+          </div>
+        </div>
+        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);">
+          <div style="display: flex; justify-content: space-between; font-size: 11px;">
+            <span style="color: var(--text-dim);">Est. Resp</span>
+            <span style="font-weight: 700;" id="primeRespect">0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px;">
+            <span style="color: var(--text-dim);">Avg/Hit</span>
+            <span style="font-weight: 700;" id="primeAvg">0</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="module-card" onclick="showCategory('risky')" style="border-left: 3px solid var(--blue);">
+        <div class="module-header">
+          <div class="module-icon">⚠️</div>
+          <div class="module-title">Risky Targets</div>
+        </div>
+        <div class="module-desc">FF 4.2-5.2 | Challenging but high reward</div>
+        <div class="module-stats">
+          <div class="module-stat">
+            <div class="label">Targets</div>
+            <div class="value" style="color: var(--blue);" id="riskyCount">0</div>
+          </div>
+          <div class="module-stat">
+            <div class="label">Sim Hits</div>
+            <div class="value" style="color: var(--blue);" id="riskySim">0</div>
+          </div>
+        </div>
+        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);">
+          <div style="display: flex; justify-content: space-between; font-size: 11px;">
+            <span style="color: var(--text-dim);">Est. Resp</span>
+            <span style="font-weight: 700;" id="riskyRespect">0</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px;">
+            <span style="color: var(--text-dim);">Avg/Hit</span>
+            <span style="font-weight: 700;" id="riskyAvg">0</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="module-card" onclick="showCategory('suicide')" style="border-left: 3px solid var(--red);">
+        <div class="module-header">
+          <div class="module-icon">🚫</div>
+          <div class="module-title">Suicide Targets</div>
+        </div>
+        <div class="module-desc">FF > 5.2 | Too strong, waste of energy</div>
+        <div class="module-stats">
+          <div class="module-stat">
+            <div class="label">Targets</div>
+            <div class="value" style="color: var(--red);" id="suicideCount">0</div>
+          </div>
+          <div class="module-stat">
+            <div class="label">Status</div>
+            <div class="value" style="font-size: 11px; color: var(--red);">NOT VIABLE</div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+  <!-- TARGET CATEGORY DRILL-DOWN -->
+  <div id="categoryView" style="display: none;">
+    <button class="back-btn" onclick="showTargetAnalysis()">← Back to Target Analysis</button>
     <h2 class="section-title" id="categoryTitle">Targets</h2>
     
     <div class="drill-layout">
@@ -1158,12 +1215,21 @@ function generateMonthlyTasks() {
 
 function showDashboard() {
   document.getElementById('dashboardView').style.display = 'block';
+  document.getElementById('targetAnalysisView').style.display = 'none';
+  document.getElementById('categoryView').style.display = 'none';
+  document.getElementById('progressView').style.display = 'none';
+}
+
+function showTargetAnalysis() {
+  document.getElementById('dashboardView').style.display = 'none';
+  document.getElementById('targetAnalysisView').style.display = 'block';
   document.getElementById('categoryView').style.display = 'none';
   document.getElementById('progressView').style.display = 'none';
 }
 
 function showCategory(tier) {
   document.getElementById('dashboardView').style.display = 'none';
+  document.getElementById('targetAnalysisView').style.display = 'none';
   document.getElementById('categoryView').style.display = 'block';
   document.getElementById('progressView').style.display = 'none';
   
