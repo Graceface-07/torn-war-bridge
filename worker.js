@@ -578,8 +578,12 @@ function getHTML() {
       <div class="value" id="userName">-</div>
     </div>
     <div class="stat-pill">
-      <div class="label">Stats</div>
-      <div class="value" id="userTotal">-</div>
+      <div class="label">Torn Stats</div>
+      <div class="value" id="userTornStats">-</div>
+    </div>
+    <div class="stat-pill">
+      <div class="label">FF Stats</div>
+      <div class="value" id="userFFStats">-</div>
     </div>
     <div class="stat-pill">
       <div class="label">Faction</div>
@@ -652,6 +656,26 @@ function getHTML() {
     <button class="back-btn" onclick="showDashboard()">← Back to Dashboard</button>
     <h2 class="view-title">Target Intelligence</h2>
     
+    <div style="margin-bottom: 20px; padding: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Calculation Source</div>
+          <div style="display: flex; gap: 10px;">
+            <button id="useTornBtn" onclick="switchStatSource('torn')" style="padding: 8px 16px; background: var(--blue); color: #fff; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
+              Torn Stats (88.3M)
+            </button>
+            <button id="useFFBtn" onclick="switchStatSource('ff')" style="padding: 8px 16px; background: var(--card); color: var(--text-dim); border: 1px solid var(--border); border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
+              FF Stats (70M)
+            </button>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">Using</div>
+          <div id="activeSource" style="font-size: 18px; font-weight: 700; color: var(--blue); margin-top: 4px;">Torn Stats</div>
+        </div>
+      </div>
+    </div>
+    
     <div class="drill-layout">
       <div class="drill-main">
         <h3 class="section-title">All Targets</h3>
@@ -689,6 +713,7 @@ let SESSION = {
   fid: null,
   myTornStats: 0,
   myFFStats: 0,
+  activeStatSource: 'torn',
   targets: [],
   stats: {
     total: 0,
@@ -697,6 +722,49 @@ let SESSION = {
     respect: 0
   }
 };
+
+function switchStatSource(source) {
+  SESSION.activeStatSource = source;
+  
+  // Update button styles
+  if (source === 'torn') {
+    document.getElementById('useTornBtn').style.background = 'var(--blue)';
+    document.getElementById('useTornBtn').style.color = '#fff';
+    document.getElementById('useTornBtn').style.border = 'none';
+    document.getElementById('useFFBtn').style.background = 'var(--card)';
+    document.getElementById('useFFBtn').style.color = 'var(--text-dim)';
+    document.getElementById('useFFBtn').style.border = '1px solid var(--border)';
+    document.getElementById('activeSource').textContent = 'Torn Stats';
+    document.getElementById('activeSource').style.color = 'var(--blue)';
+  } else {
+    document.getElementById('useFFBtn').style.background = 'var(--cyan)';
+    document.getElementById('useFFBtn').style.color = '#fff';
+    document.getElementById('useFFBtn').style.border = 'none';
+    document.getElementById('useTornBtn').style.background = 'var(--card)';
+    document.getElementById('useTornBtn').style.color = 'var(--text-dim)';
+    document.getElementById('useTornBtn').style.border = '1px solid var(--border)';
+    document.getElementById('activeSource').textContent = 'FF Stats';
+    document.getElementById('activeSource').style.color = 'var(--cyan)';
+  }
+  
+  // Recalculate all targets with new stat source
+  recalculateTargets();
+}
+
+function recalculateTargets() {
+  const myStats = SESSION.activeStatSource === 'torn' ? SESSION.myTornStats : SESSION.myFFStats;
+  
+  SESSION.targets.forEach(target => {
+    const analysis = calculateWinProbability(myStats, target.total, target.ff);
+    target.winChance = analysis.winChance;
+    target.verdict = analysis.verdict;
+    target.reasoning = analysis.reasoning;
+  });
+  
+  calculateStats();
+  renderTargets();
+  renderAdvice();
+}
 
 function formatStats(n) {
   if (!n) return '-';
@@ -730,12 +798,13 @@ async function initializeScan() {
     const userData = await userRes.json();
     
     SESSION.myTornStats = userData.totalEffective || userData.total;
-    SESSION.myFFStats = 70000000; // Placeholder
+    SESSION.myFFStats = 70000000; // TODO: Fetch from FF Scouter for user
     
     console.log('User stats - Total:', userData.total, 'Effective:', userData.totalEffective);
     
     document.getElementById('userName').textContent = userData.name;
-    document.getElementById('userTotal').textContent = formatStats(userData.totalEffective || userData.total);
+    document.getElementById('userTornStats').textContent = formatStats(SESSION.myTornStats);
+    document.getElementById('userFFStats').textContent = formatStats(SESSION.myFFStats);
     
     // Get faction
     const factionRes = await fetch('/api/get-faction', {
