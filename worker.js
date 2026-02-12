@@ -92,6 +92,9 @@ async function getUserStats(request, env, corsHeaders) {
     // Calculate effective stats from individual stats with modifiers
     let totalEffective = Number(data.total) || 0;
     
+    console.log('Raw Torn API data - total:', data.total);
+    console.log('Strength:', data.strength, 'Modifier:', data.strength_modifier);
+    
     if (data.strength !== undefined) {
       const strMod = (data.strength_modifier || 0) / 100;
       const defMod = (data.defense_modifier || 0) / 100;
@@ -104,6 +107,8 @@ async function getUserStats(request, env, corsHeaders) {
       const dex = (data.dexterity || 0) * (1 + dexMod);
       
       totalEffective = Math.floor(str + def + spd + dex);
+      
+      console.log('Calculated effective:', totalEffective);
     }
     
     return jsonResponse({
@@ -595,7 +600,7 @@ function getHTML() {
   </div>
   
   <!-- MAIN DASHBOARD -->
-  <div id="dashboardView" class="hidden">
+  <div id="dashboardView" style="display: none;">
     <h2 class="view-title">Command Center</h2>
     <div class="module-grid">
       
@@ -643,7 +648,7 @@ function getHTML() {
   </div>
   
   <!-- TARGET INTELLIGENCE VIEW -->
-  <div id="targetsView" class="drill-down">
+  <div id="targetsView" style="display: none;">
     <button class="back-btn" onclick="showDashboard()">← Back to Dashboard</button>
     <h2 class="view-title">Target Intelligence</h2>
     
@@ -725,8 +730,12 @@ async function initializeScan() {
     const userData = await userRes.json();
     
     SESSION.myTornStats = userData.totalEffective || userData.total;
+    SESSION.myFFStats = 70000000; // Placeholder
+    
+    console.log('User stats - Total:', userData.total, 'Effective:', userData.totalEffective);
+    
     document.getElementById('userName').textContent = userData.name;
-    document.getElementById('userTotal').textContent = formatStats(SESSION.myTornStats);
+    document.getElementById('userTotal').textContent = formatStats(userData.totalEffective || userData.total);
     
     // Get faction
     const factionRes = await fetch('/api/get-faction', {
@@ -741,8 +750,8 @@ async function initializeScan() {
     // Process targets
     await processTargets(factionData.members.filter(m => m.id !== uid));
     
-    document.getElementById('initScreen').classList.add('hidden');
-    document.getElementById('dashboardView').classList.remove('hidden');
+    document.getElementById('initScreen').style.display = 'none';
+    document.getElementById('dashboardView').style.display = 'block';
     
   } catch (error) {
     console.error('Init error:', error);
@@ -841,13 +850,17 @@ function updateDashboard() {
 }
 
 function showDashboard() {
-  document.getElementById('dashboardView').classList.remove('hidden');
-  document.getElementById('targetsView').classList.add('hidden');
+  console.log('Showing dashboard');
+  document.getElementById('dashboardView').style.display = 'block';
+  document.getElementById('targetsView').style.display = 'none';
+  document.getElementById('initScreen').style.display = 'none';
 }
 
 function showTargets() {
-  document.getElementById('dashboardView').classList.add('hidden');
-  document.getElementById('targetsView').classList.remove('hidden');
+  console.log('Showing targets view');
+  document.getElementById('dashboardView').style.display = 'none';
+  document.getElementById('targetsView').style.display = 'block';
+  document.getElementById('initScreen').style.display = 'none';
   
   renderTargets();
   renderAdvice();
