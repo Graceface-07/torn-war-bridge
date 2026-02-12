@@ -1084,6 +1084,10 @@ function updateDashboard() {
   document.getElementById('gapAnalysis').textContent = wastedHits;
   document.getElementById('efficiencyScore').textContent = avgResp;
   
+  // Update Target Analysis tile
+  document.getElementById('beatableMain').textContent = beatable.length;
+  document.getElementById('totalRespMain').textContent = formatStats(SESSION.stats.respect);
+  
   // Set verdict
   let verdict = 'GOOD RANK WAR';
   let verdictDesc = 'Solid target pool with good respect potential';
