@@ -845,8 +845,11 @@ function getHTML() {
         });
         const data = await res.json();
         
+        // Handle different response formats
+        const scouterData = data.data || data || [];
+        
         chunk.forEach((member, idx) => {
-          const sc = data.data[idx] || { fair_fight: 1.0, bs_estimate: 0 };
+          const sc = scouterData[idx] || { fair_fight: 1.0, bs_estimate: 0 };
           const ff = Number(sc.fair_fight) || 1.0;
           const total = Number(sc.bs_estimate) || 0;
           
