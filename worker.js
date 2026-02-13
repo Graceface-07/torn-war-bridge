@@ -522,11 +522,13 @@ function getHTML() {
     <!-- MAIN DASHBOARD -->
     <div id="dashboardView" style="display: none;">
       
-      <!-- War Verdict -->
-      <div class="war-verdict">
-        <div class="label">War Assessment</div>
-        <div class="verdict" id="warVerdict" style="color: var(--green);">ANALYZING...</div>
-        <div class="desc" id="verdictDesc">Calculating tactical situation...</div>
+      <!-- User Info Panel -->
+      <div style="background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+        <div style="font-weight: 600;"><span id="userName">-</span></div>
+        <div style="color: var(--text-dim);">FF: <span style="color: var(--cyan); font-weight: 600;" id="userFF">-</span></div>
+        <div style="color: var(--text-dim);">Scouter: <span style="color: var(--amber); font-weight: 600;" id="scouterStats">-</span></div>
+        <div style="color: var(--text-dim);">Torn: <span style="color: var(--green); font-weight: 600;" id="tornStats">-</span></div>
+        <div style="color: var(--text-dim);">Effective: <span style="color: var(--cyan); font-weight: 600;" id="effectiveStats">-</span></div>
       </div>
       
       <!-- Main Grid -->
@@ -535,7 +537,7 @@ function getHTML() {
         <!-- Member List -->
         <div class="member-list-panel">
           <div class="member-list-header">
-            <h3>Faction Roster</h3>
+            <h3 id="factionName">Faction</h3>
             <div class="member-count"><span id="memberCount">0</span> members</div>
           </div>
           
@@ -634,42 +636,114 @@ function getHTML() {
       <button class="back-btn" onclick="showDashboard()">← Back to Command Center</button>
       <h2 class="view-title">Target Intelligence</h2>
       
-      <div class="module-grid" style="margin-bottom: 24px;">
-        <div class="module-tile" style="border-left-color: var(--amber);" onclick="showCategory('safe')">
-          <div class="module-icon">✓</div>
-          <div class="module-title">Safe Targets</div>
-          <div class="module-desc">FF < 1.8 | Easy wins</div>
-          <div class="module-stats">
-            <div class="module-stat">
-              <div class="label">Count</div>
-              <div class="value" style="color: var(--amber);" id="safeCount">0</div>
+      <!-- War Verdict Panel -->
+      <div style="background: var(--card); border: 2px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; text-align: center;">
+        <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Command Verdict</div>
+        <div style="font-size: 32px; font-weight: 700; font-family: 'Orbitron', monospace; margin-bottom: 8px;" id="warVerdict">-</div>
+        <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 20px;" id="verdictAdvice">-</div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 20px; background: var(--panel); border-radius: 8px; margin-bottom: 20px;">
+          <div style="text-align: center;">
+            <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">20-Hit Est.</div>
+            <div style="font-size: 28px; font-weight: 700; color: var(--green);" id="twentyHitEst">0</div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">RESPECT</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Gap Analysis</div>
+            <div style="font-size: 28px; font-weight: 700; color: var(--red);" id="gapAnalysis">0</div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">WASTED HITS</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Efficiency</div>
+            <div style="font-size: 28px; font-weight: 700; color: var(--amber);" id="efficiency">0</div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">AVG / HIT</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Category Tiles -->
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
+        
+        <div style="background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--amber); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s;" onclick="showCategory('safe')">
+          <div style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">SAFE</div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Targets</div>
+              <div style="font-size: 24px; font-weight: 700; color: var(--amber);" id="safeTargets">0</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Sim Hits</div>
+              <div style="font-size: 24px; font-weight: 700;" id="safeSimHits">0</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Est. Resp</div>
+              <div style="font-size: 18px; font-weight: 700;" id="safeResp">0.0</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Avg/Hit</div>
+              <div style="font-size: 18px; font-weight: 700;" id="safeAvg">0.00</div>
             </div>
           </div>
         </div>
         
-        <div class="module-tile" style="border-left-color: var(--green);" onclick="showCategory('prime')">
-          <div class="module-icon">🎯</div>
-          <div class="module-title">Prime Targets</div>
-          <div class="module-desc">FF 1.8-4.2 | Optimal</div>
-          <div class="module-stats">
-            <div class="module-stat">
-              <div class="label">Count</div>
-              <div class="value" style="color: var(--green);" id="primeCount">0</div>
+        <div style="background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--green); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s;" onclick="showCategory('prime')">
+          <div style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">PRIME</div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Targets</div>
+              <div style="font-size: 24px; font-weight: 700; color: var(--green);" id="primeTargets">0</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Sim Hits</div>
+              <div style="font-size: 24px; font-weight: 700;" id="primeSimHits">0</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Est. Resp</div>
+              <div style="font-size: 18px; font-weight: 700;" id="primeResp">0.0</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Avg/Hit</div>
+              <div style="font-size: 18px; font-weight: 700;" id="primeAvg">0.00</div>
             </div>
           </div>
         </div>
         
-        <div class="module-tile" style="border-left-color: var(--blue);" onclick="showCategory('risky')">
-          <div class="module-icon">⚠️</div>
-          <div class="module-title">Risky Targets</div>
-          <div class="module-desc">FF 4.2-5.2 | High reward</div>
-          <div class="module-stats">
-            <div class="module-stat">
-              <div class="label">Count</div>
-              <div class="value" style="color: var(--blue);" id="riskyCount">0</div>
+        <div style="background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--blue); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s;" onclick="showCategory('risky')">
+          <div style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">RISKY</div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Targets</div>
+              <div style="font-size: 24px; font-weight: 700; color: var(--blue);" id="riskyTargets">0</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Sim Hits</div>
+              <div style="font-size: 24px; font-weight: 700;" id="riskySimHits">0</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Est. Resp</div>
+              <div style="font-size: 18px; font-weight: 700;" id="riskyResp">0.0</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Avg/Hit</div>
+              <div style="font-size: 18px; font-weight: 700;" id="riskyAvg">0.00</div>
             </div>
           </div>
         </div>
+        
+        <div style="background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--red); border-radius: 12px; padding: 20px;">
+          <div style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">SUICIDE</div>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Targets</div>
+              <div style="font-size: 24px; font-weight: 700; color: var(--red);" id="suicideTargets">0</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Status</div>
+              <div style="font-size: 14px; font-weight: 700; color: var(--red); margin-top: 8px;">NOT VIABLE</div>
+            </div>
+          </div>
+        </div>
+        
       </div>
     </div>
     
@@ -806,6 +880,8 @@ function getHTML() {
         });
         const userData = await userRes.json();
         SESSION.myStats = userData.total;
+        SESSION.userName = userData.name;
+        SESSION.userLevel = userData.level;
         
         // Get faction
         const factionRes = await fetch('/api/get-faction', {
@@ -814,8 +890,17 @@ function getHTML() {
           body: JSON.stringify({ fid })
         });
         const factionData = await factionRes.json();
+        SESSION.factionName = factionData.name;
         
         await processTargets(factionData.members.filter(m => m.id !== uid));
+        
+        // Update top panel
+        document.getElementById('userName').textContent = SESSION.userName;
+        document.getElementById('userFF').textContent = '2.3x'; // Will calculate properly later
+        document.getElementById('scouterStats').textContent = formatStats(SESSION.myStats * 0.9); // Estimate
+        document.getElementById('tornStats').textContent = formatStats(SESSION.myStats);
+        document.getElementById('effectiveStats').textContent = formatStats(SESSION.myStats);
+        document.getElementById('factionName').textContent = SESSION.factionName;
         
         document.getElementById('initScreen').style.display = 'none';
         document.getElementById('dashboardView').style.display = 'block';
@@ -910,29 +995,39 @@ function getHTML() {
       document.getElementById('memberCount').textContent = SESSION.stats.total;
       
       renderMemberList();
-      updateWarVerdict();
       updateCategoryCounts();
     }
     
     function updateWarVerdict() {
-      const percent = SESSION.stats.total > 0 ? (SESSION.stats.beatable / SESSION.stats.total) * 100 : 0;
-      let verdict = 'GOOD RANK WAR';
-      let color = 'var(--green)';
-      let desc = 'Solid target pool with good respect potential';
+      const beatable = SESSION.targets.filter(t => t.winChance >= 50);
+      const sorted = beatable.sort((a, b) => b.respect - a.respect);
+      const top20 = sorted.slice(0, 20);
+      const twentyHitEst = top20.reduce((sum, t) => sum + t.respect, 0);
+      const wastedHits = SESSION.targets.filter(t => t.winChance < 50).length;
+      const avgPerHit = beatable.length > 0 ? twentyHitEst / Math.min(beatable.length, 20) : 0;
       
-      if (percent < 30) {
-        verdict = 'POOR RANK WAR';
-        color = 'var(--red)';
-        desc = \`Only \${SESSION.stats.beatable} beatable targets - challenging matchup\`;
-      } else if (percent > 70) {
+      document.getElementById('twentyHitEst').textContent = twentyHitEst.toFixed(1);
+      document.getElementById('gapAnalysis').textContent = wastedHits;
+      document.getElementById('efficiency').textContent = avgPerHit.toFixed(2);
+      
+      let verdict, color, advice;
+      if (twentyHitEst >= 200) {
         verdict = 'EXCELLENT RANK WAR';
         color = 'var(--cyan)';
-        desc = \`\${SESSION.stats.beatable} beatable targets - favorable matchup\`;
+        advice = 'Strong target pool - focus on Prime targets for maximum efficiency';
+      } else if (twentyHitEst >= 160) {
+        verdict = 'MODERATE RANK WAR';
+        color = 'var(--amber)';
+        advice = 'Decent matchup - prioritize high FF targets and avoid wasted hits';
+      } else {
+        verdict = 'POOR RANK WAR';
+        color = 'var(--red)';
+        advice = 'Challenging war - coordinate group attacks and focus only on Safe/Prime categories';
       }
       
       document.getElementById('warVerdict').textContent = verdict;
       document.getElementById('warVerdict').style.color = color;
-      document.getElementById('verdictDesc').textContent = desc;
+      document.getElementById('verdictAdvice').textContent = advice;
     }
     
     function renderMemberList() {
@@ -950,13 +1045,34 @@ function getHTML() {
     }
     
     function updateCategoryCounts() {
-      const safe = SESSION.targets.filter(t => t.tier === 'amber').length;
-      const prime = SESSION.targets.filter(t => t.tier === 'green').length;
-      const risky = SESSION.targets.filter(t => t.tier === 'blue').length;
+      const safe = SESSION.targets.filter(t => t.tier === 'amber' && t.winChance >= 50);
+      const prime = SESSION.targets.filter(t => t.tier === 'green' && t.winChance >= 50);
+      const risky = SESSION.targets.filter(t => t.tier === 'blue' && t.winChance >= 50);
+      const suicide = SESSION.targets.filter(t => t.tier === 'red');
       
-      document.getElementById('safeCount').textContent = safe;
-      document.getElementById('primeCount').textContent = prime;
-      document.getElementById('riskyCount').textContent = risky;
+      // Safe stats
+      document.getElementById('safeTargets').textContent = safe.length;
+      document.getElementById('safeSimHits').textContent = Math.min(safe.length, 20);
+      const safeResp = safe.reduce((sum, t) => sum + t.respect, 0);
+      document.getElementById('safeResp').textContent = safeResp.toFixed(1);
+      document.getElementById('safeAvg').textContent = safe.length > 0 ? (safeResp / safe.length).toFixed(2) : '0.00';
+      
+      // Prime stats
+      document.getElementById('primeTargets').textContent = prime.length;
+      document.getElementById('primeSimHits').textContent = Math.min(prime.length, 20);
+      const primeResp = prime.reduce((sum, t) => sum + t.respect, 0);
+      document.getElementById('primeResp').textContent = primeResp.toFixed(1);
+      document.getElementById('primeAvg').textContent = prime.length > 0 ? (primeResp / prime.length).toFixed(2) : '0.00';
+      
+      // Risky stats
+      document.getElementById('riskyTargets').textContent = risky.length;
+      document.getElementById('riskySimHits').textContent = Math.min(risky.length, 20);
+      const riskyResp = risky.reduce((sum, t) => sum + t.respect, 0);
+      document.getElementById('riskyResp').textContent = riskyResp.toFixed(1);
+      document.getElementById('riskyAvg').textContent = risky.length > 0 ? (riskyResp / risky.length).toFixed(2) : '0.00';
+      
+      // Suicide
+      document.getElementById('suicideTargets').textContent = suicide.length;
     }
     
     function toggleFilter(filter) {
@@ -987,6 +1103,11 @@ function getHTML() {
       };
       
       document.getElementById(moduleMap[module]).style.display = 'block';
+      
+      // Update war verdict when showing targets module
+      if (module === 'targets') {
+        updateWarVerdict();
+      }
     }
     
     function showCategory(category) {
