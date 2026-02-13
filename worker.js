@@ -946,7 +946,7 @@ async function processTargets(members) {
       const total = Number(sc.bs_estimate) || 0;
       
       const analysis = calculateWinProbability(SESSION.myTornStats, total, ff);
-      const respect = calculateRespect(total, ff);
+      const respect = calculateRespect(total, ff, member.level);
       
       let tier;
       if (ff < 1.8) tier = 'amber';
@@ -997,9 +997,20 @@ function calculateWinProbability(myStats, enemyStats, ff) {
   return { winChance, verdict, reasoning, statRatio: ratio };
 }
 
-function calculateRespect(enemyTotal, ff) {
-  const base = (enemyTotal / 100000000) * ff;
-  return Math.round(Math.min(Math.max(base, 1), 500));
+function calculateRespect(enemyTotal, ff, enemyLevel = 50) {
+  // Level-based respect (1.0 at L1, 1.5 at L100)
+  const levelRespect = 1.0 + ((enemyLevel - 1) / 100) * 0.5;
+  
+  // Apply FF multiplier
+  const baseRespect = levelRespect * ff;
+  
+  // War bonus (2x during ranked wars)
+  const warRespect = baseRespect * 2;
+  
+  // Warlord weapon bonus (+16%)
+  const finalRespect = warRespect * 1.16;
+  
+  return Math.round(finalRespect * 10) / 10; // Round to 1 decimal
 }
 
 function calculateStats() {
@@ -1013,6 +1024,29 @@ function updateDashboard() {
   document.getElementById('beatableCount').textContent = SESSION.stats.beatable;
   document.getElementById('primeCount').textContent = SESSION.stats.prime;
   document.getElementById('totalRespect').textContent = formatStats(SESSION.stats.respect);
+  
+  // Populate member list
+  renderMemberListMain();
+  
+  // Calculate and show war verdict
+  const beatablePercent = SESSION.stats.total > 0 ? (SESSION.stats.beatable / SESSION.stats.total) * 100 : 0;
+  let verdict = 'GOOD RANK WAR';
+  let verdictColor = 'var(--green)';
+  let verdictDesc = 'Solid target pool with good respect potential';
+  
+  if (beatablePercent < 30) {
+    verdict = 'POOR RANK WAR';
+    verdictColor = 'var(--red)';
+    verdictDesc = 'Only ' + SESSION.stats.beatable + ' beatable targets - challenging matchup';
+  } else if (beatablePercent > 70) {
+    verdict = 'EXCELLENT RANK WAR';
+    verdictColor = 'var(--cyan)';
+    verdictDesc = SESSION.stats.beatable + ' beatable targets - favorable matchup';
+  }
+  
+  document.getElementById('warVerdict').textContent = verdict;
+  document.getElementById('warVerdict').style.color = verdictColor;
+  document.getElementById('verdictDesc').textContent = verdictDesc;
 }
 
 function showDashboard() {
