@@ -606,54 +606,150 @@ function getHTML() {
   <!-- MAIN DASHBOARD -->
   <div id="dashboardView" style="display: none;">
     <h2 class="view-title">Command Center</h2>
-    <div class="module-grid">
+    
+    <!-- War Verdict Panel -->
+    <div style="background: var(--card); border: 2px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; text-align: center;">
+      <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">War Assessment</div>
+      <div style="font-size: 28px; font-weight: 700; color: var(--green); font-family: 'Orbitron', monospace;" id="warVerdict">ANALYZING...</div>
+      <div style="font-size: 13px; color: var(--text-dim); margin-top: 8px;" id="verdictDesc">Calculating...</div>
+    </div>
+    
+    <!-- Main Grid: Members + Modules -->
+    <div style="display: grid; grid-template-columns: 1fr 450px; gap: 20px;">
       
-      <div class="module-card" onclick="showTargets()">
+      <!-- Member List -->
+      <div style="background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+          <h3 style="font-size: 13px; font-weight: 700; text-transform: uppercase;">Faction Roster</h3>
+          <div style="font-size: 12px; color: var(--text-dim);"><span id="memberCountMain">0</span> members</div>
+        </div>
+        <div id="memberListMain" style="max-height: 550px; overflow-y: auto;"></div>
+      </div>
+      
+      <!-- Module Tiles -->
+      <div class="module-grid" style="height: fit-content;">
+        
+        <div class="module-card" onclick="showTargetAnalysis()">
+          <div class="module-header">
+            <div class="module-icon">🎯</div>
+            <div class="module-title">Target Analysis</div>
+          </div>
+          <div class="module-desc">
+            Categorized targets by difficulty
+          </div>
+          <div class="module-stats">
+            <div class="module-stat">
+              <div class="label">Beatable</div>
+              <div class="value" id="beatableCount">0</div>
+            </div>
+            <div class="module-stat">
+              <div class="label">Respect</div>
+              <div class="value" style="color: var(--cyan);" id="totalRespect">0</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="module-card" onclick="alert('War Timer - Coming Soon')">
+          <div class="module-header">
+            <div class="module-icon">⏱️</div>
+            <div class="module-title">War Timer</div>
+          </div>
+          <div class="module-desc">
+            Xanax countdown & energy tracking
+          </div>
+        </div>
+        
+        <div class="module-card" onclick="alert('Analytics - Coming Soon')">
+          <div class="module-header">
+            <div class="module-icon">📊</div>
+            <div class="module-title">Analytics</div>
+          </div>
+          <div class="module-desc">
+            Respect breakdown & metrics
+          </div>
+        </div>
+        
+        <div class="module-card" onclick="alert('Battle Advice - Coming Soon')">
+          <div class="module-header">
+            <div class="module-icon">🎓</div>
+            <div class="module-title">Battle Advice</div>
+          </div>
+          <div class="module-desc">
+            Real-time tactical tips
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+  
+  <!-- TARGET ANALYSIS VIEW (CATEGORY SELECTION) -->
+  <div id="targetAnalysisView" style="display: none;">
+    <button class="back-btn" onclick="showDashboard()">← Back to Command Center</button>
+    <h2 class="view-title">Target Analysis</h2>
+    
+    <div class="module-grid">
+      <div class="module-card" onclick="showTargets('safe')">
+        <div class="module-header">
+          <div class="module-icon">✓</div>
+          <div class="module-title">Safe Targets</div>
+        </div>
+        <div class="module-desc">FF < 1.8 | Easy wins, low respect</div>
+        <div class="module-stats">
+          <div class="module-stat">
+            <div class="label">Count</div>
+            <div class="value" style="color: var(--amber);" id="safeCount">0</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="module-card" onclick="showTargets('prime')">
         <div class="module-header">
           <div class="module-icon">🎯</div>
-          <div class="module-title">Target Intelligence</div>
+          <div class="module-title">Prime Targets</div>
         </div>
-        <div class="module-desc">
-          Analyze enemy faction, identify beatable targets, and prioritize attacks.
-        </div>
+        <div class="module-desc">FF 1.8-4.2 | Optimal targets</div>
         <div class="module-stats">
           <div class="module-stat">
-            <div class="label">Beatable</div>
-            <div class="value" id="beatableCount">0</div>
-          </div>
-          <div class="module-stat">
-            <div class="label">Prime</div>
-            <div class="value" style="color: var(--amber);" id="primeCount">0</div>
-          </div>
-          <div class="module-stat">
-            <div class="label">Respect</div>
-            <div class="value" style="color: var(--cyan);" id="totalRespect">0</div>
+            <div class="label">Count</div>
+            <div class="value" style="color: var(--green);" id="primeCount">0</div>
           </div>
         </div>
       </div>
       
-      <div class="module-card">
+      <div class="module-card" onclick="showTargets('risky')">
         <div class="module-header">
-          <div class="module-icon">⚔️</div>
-          <div class="module-title">War Planning</div>
+          <div class="module-icon">⚠️</div>
+          <div class="module-title">Risky Targets</div>
         </div>
-        <div class="module-desc">
-          Strategic war preparation including Xanax timing and energy management.
-        </div>
+        <div class="module-desc">FF 4.2-5.2 | High reward</div>
         <div class="module-stats">
           <div class="module-stat">
-            <div class="label">Status</div>
-            <div class="value" style="font-size: 14px; color: var(--text-dim);">Soon</div>
+            <div class="label">Count</div>
+            <div class="value" style="color: var(--blue);" id="riskyCount">0</div>
           </div>
         </div>
       </div>
       
+      <div class="module-card" onclick="showTargets('suicide')">
+        <div class="module-header">
+          <div class="module-icon">🚫</div>
+          <div class="module-title">Suicide</div>
+        </div>
+        <div class="module-desc">FF > 5.2 | Too strong</div>
+        <div class="module-stats">
+          <div class="module-stat">
+            <div class="label">Count</div>
+            <div class="value" style="color: var(--red);" id="suicideCount">0</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   
   <!-- TARGET INTELLIGENCE VIEW -->
   <div id="targetsView" style="display: none;">
-    <button class="back-btn" onclick="showDashboard()">← Back to Dashboard</button>
+    <button class="back-btn" onclick="showTargetAnalysis()">← Back to Target Analysis</button>
     <h2 class="view-title">Target Intelligence</h2>
     
     <div style="margin-bottom: 20px; padding: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 8px;">
@@ -714,6 +810,7 @@ let SESSION = {
   myTornStats: 0,
   myFFStats: 0,
   activeStatSource: 'torn',
+  currentFilter: null,
   targets: [],
   stats: {
     total: 0,
@@ -921,18 +1018,69 @@ function updateDashboard() {
 function showDashboard() {
   console.log('Showing dashboard');
   document.getElementById('dashboardView').style.display = 'block';
+  document.getElementById('targetAnalysisView').style.display = 'none';
   document.getElementById('targetsView').style.display = 'none';
   document.getElementById('initScreen').style.display = 'none';
+  
+  // Populate member list on dashboard
+  renderMemberListMain();
 }
 
-function showTargets() {
-  console.log('Showing targets view');
+function showTargetAnalysis() {
+  console.log('Showing target analysis');
   document.getElementById('dashboardView').style.display = 'none';
+  document.getElementById('targetAnalysisView').style.display = 'block';
+  document.getElementById('targetsView').style.display = 'none';
+  
+  // Update category counts
+  updateCategoryCounts();
+}
+
+function showTargets(filter = null) {
+  console.log('Showing targets view, filter:', filter);
+  document.getElementById('dashboardView').style.display = 'none';
+  document.getElementById('targetAnalysisView').style.display = 'none';
   document.getElementById('targetsView').style.display = 'block';
   document.getElementById('initScreen').style.display = 'none';
   
+  SESSION.currentFilter = filter;
   renderTargets();
   renderAdvice();
+}
+
+function renderMemberListMain() {
+  const sorted = [...SESSION.targets].sort((a, b) => b.respect - a.respect);
+  const tierColors = { amber: 'var(--amber)', green: 'var(--green)', blue: 'var(--blue)', red: 'var(--red)' };
+  
+  const html = sorted.map(t => \`
+    <div style="background: var(--panel); border: 1px solid var(--border); border-left: 3px solid \${tierColors[t.tier]}; padding: 10px 12px; border-radius: 6px; margin-bottom: 6px;">
+      <div style="display: flex; justify-content: space-between;">
+        <div>
+          <div style="font-weight: 600; font-size: 13px;">\${t.name}</div>
+          <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Level \${t.level} • FF \${t.ff.toFixed(2)}x</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-weight: 700; font-size: 14px; color: \${tierColors[t.tier]};">\${t.respect.toFixed(1)}</div>
+          <div style="font-size: 10px; color: var(--text-dim);">\${t.winChance}% win</div>
+        </div>
+      </div>
+    </div>
+  \`).join('');
+  
+  document.getElementById('memberListMain').innerHTML = html;
+  document.getElementById('memberCountMain').textContent = SESSION.targets.length;
+}
+
+function updateCategoryCounts() {
+  const safe = SESSION.targets.filter(t => t.tier === 'amber').length;
+  const prime = SESSION.targets.filter(t => t.tier === 'green').length;
+  const risky = SESSION.targets.filter(t => t.tier === 'blue').length;
+  const suicide = SESSION.targets.filter(t => t.tier === 'red').length;
+  
+  document.getElementById('safeCount').textContent = safe;
+  document.getElementById('primeCount').textContent = prime;
+  document.getElementById('riskyCount').textContent = risky;
+  document.getElementById('suicideCount').textContent = suicide;
 }
 
 function renderTargets() {
