@@ -69,7 +69,7 @@ async function getUserStats(request, env, corsHeaders) {
   const { uid } = await request.json();
   
   try {
-    const tornUrl = `https://api.torn.com/user/${uid}?selections=profile,battlestats&key=${SC_KEY}`;
+    const tornUrl = `https://api.torn.com/user/${uid}?selections=profile,battlestats&key=${gc43XVxOpCcwLnY6}`;
     const response = await fetch(tornUrl);
     const data = await response.json();
     
@@ -120,7 +120,7 @@ async function getFactionRoster(request, env, corsHeaders) {
   const { fid } = await request.json();
   
   try {
-    const url = `https://api.torn.com/faction/${fid}?selections=basic&key=${SC_KEY}`;
+    const url = `https://api.torn.com/faction/${fid}?selections=basic&key=${TORN_API_KEY}`;
     const response = await fetch(url);
     const data = await response.json();
     
