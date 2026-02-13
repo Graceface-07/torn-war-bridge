@@ -95,14 +95,12 @@ export default {
       const targets = body.targets;
       const uid = body.uid;
       
-      const res = await fetch('https://ffscouter.com/api/v1/get-stats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key: SC_KEY,
-          targets: targets.join(','),
-          user_id: uid
-        })
+      const targetsCsv = targets.join(',');
+      const scUrl = `https://ffscouter.com/api/v1/get-stats?key=${SC_KEY}&targets=${targetsCsv}&user_id=${uid}`;
+      
+      const res = await fetch(scUrl, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
       
       const data = await res.json();
