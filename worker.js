@@ -1051,23 +1051,23 @@ function getHTML() {
       const suicide = SESSION.targets.filter(t => t.tier === 'red');
       
       // Safe stats
+      const safeResp = safe.reduce((sum, t) => sum + (t.respect || 0), 0);
       document.getElementById('safeTargets').textContent = safe.length;
       document.getElementById('safeSimHits').textContent = Math.min(safe.length, 20);
-      const safeResp = safe.reduce((sum, t) => sum + t.respect, 0);
       document.getElementById('safeResp').textContent = safeResp.toFixed(1);
       document.getElementById('safeAvg').textContent = safe.length > 0 ? (safeResp / safe.length).toFixed(2) : '0.00';
       
       // Prime stats
+      const primeResp = prime.reduce((sum, t) => sum + (t.respect || 0), 0);
       document.getElementById('primeTargets').textContent = prime.length;
       document.getElementById('primeSimHits').textContent = Math.min(prime.length, 20);
-      const primeResp = prime.reduce((sum, t) => sum + t.respect, 0);
       document.getElementById('primeResp').textContent = primeResp.toFixed(1);
       document.getElementById('primeAvg').textContent = prime.length > 0 ? (primeResp / prime.length).toFixed(2) : '0.00';
       
       // Risky stats
+      const riskyResp = risky.reduce((sum, t) => sum + (t.respect || 0), 0);
       document.getElementById('riskyTargets').textContent = risky.length;
       document.getElementById('riskySimHits').textContent = Math.min(risky.length, 20);
-      const riskyResp = risky.reduce((sum, t) => sum + t.respect, 0);
       document.getElementById('riskyResp').textContent = riskyResp.toFixed(1);
       document.getElementById('riskyAvg').textContent = risky.length > 0 ? (riskyResp / risky.length).toFixed(2) : '0.00';
       
