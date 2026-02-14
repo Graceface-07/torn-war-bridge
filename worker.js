@@ -624,171 +624,69 @@ function getHTML() {
   <!-- MAIN DASHBOARD -->
   <div id="dashboardView" style="display: none;">
     
-    <!-- WAR VERDICT PANEL -->
-    <div style="background: var(--card); border: 2px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px; text-align: center;">
-      <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Command Verdict</div>
-      <div style="font-size: 32px; font-weight: 700; color: var(--green); font-family: 'Orbitron', monospace; margin-bottom: 8px;" id="verdictText">ANALYZING...</div>
-      <div style="font-size: 13px; color: var(--text-dim);" id="verdictDesc">Calculating war potential...</div>
-      
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+    <!-- FACTION OVERVIEW -->
+    <div class="section-title">Faction Overview</div>
+    <div style="background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 32px;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
         <div>
-          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">20-Hit Est.</div>
-          <div style="font-size: 28px; font-weight: 700; color: var(--green);" id="twentyHitEst">0</div>
-          <div style="font-size: 9px; color: var(--text-dim); text-transform: uppercase;">Respect</div>
+          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Total Members</div>
+          <div style="font-size: 32px; font-weight: 700;" id="totalMembers">0</div>
         </div>
         <div>
-          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Gap Analysis</div>
-          <div style="font-size: 28px; font-weight: 700; color: var(--blue);" id="gapAnalysis">0</div>
-          <div style="font-size: 9px; color: var(--text-dim); text-transform: uppercase;">Wasted Hits</div>
+          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Beatable</div>
+          <div style="font-size: 32px; font-weight: 700; color: var(--green);" id="beatableCount">0</div>
         </div>
         <div>
-          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Efficiency</div>
-          <div style="font-size: 28px; font-weight: 700; color: var(--amber);" id="efficiencyScore">0</div>
-          <div style="font-size: 9px; color: var(--text-dim); text-transform: uppercase;">Avg / Hit</div>
+          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Potential Respect</div>
+          <div style="font-size: 32px; font-weight: 700; color: var(--cyan);" id="totalRespect">0</div>
+        </div>
+        <div>
+          <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Avg Resp/Energy</div>
+          <div style="font-size: 32px; font-weight: 700; color: var(--amber);" id="avgEfficiency">0</div>
         </div>
       </div>
     </div>
     
-    <!-- MAIN GRID: MEMBERS LEFT, MODULES RIGHT -->
-    <div style="display: grid; grid-template-columns: 1fr 500px; gap: 20px;">
-      
-      <!-- LEFT: MEMBER LIST -->
-      <div style="background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Faction Roster</h3>
-          <div style="font-size: 12px; color: var(--text-dim);"><span id="memberCount">0</span> members</div>
-        </div>
-        <div id="memberList" style="max-height: 600px; overflow-y: auto;"></div>
-      </div>
-      
-      <!-- RIGHT: MODULE TILES -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: fit-content;">
-        
-        <div class="module-card" onclick="showTargetAnalysis()" style="grid-column: 1 / -1; border-left: 3px solid var(--blue);">
-          <div class="module-header">
-            <div class="module-icon">🎯</div>
-            <div class="module-title">Target Analysis</div>
-          </div>
-          <div class="module-desc">
-            Categorized targets by difficulty - Safe, Prime, Risky, Suicide
-          </div>
-          <div class="module-stats">
-            <div class="module-stat">
-              <div class="label">Beatable</div>
-              <div class="value" style="color: var(--green);" id="beatableMain">0</div>
-            </div>
-            <div class="module-stat">
-              <div class="label">Total Resp</div>
-              <div class="value" style="color: var(--cyan);" id="totalRespMain">0</div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="module-card" onclick="alert('War Timer - Coming Soon')">
-          <div class="module-header">
-            <div class="module-icon">⏱️</div>
-            <div class="module-title">War Timer</div>
-          </div>
-          <div class="module-desc">
-            Xanax countdown and energy tracking
-          </div>
-        </div>
-        
-        <div class="module-card" onclick="alert('Analytics - Coming Soon')">
-          <div class="module-header">
-            <div class="module-icon">📊</div>
-            <div class="module-title">Analytics</div>
-          </div>
-          <div class="module-desc">
-            Respect breakdown and efficiency metrics
-          </div>
-        </div>
-        
-        <div class="module-card" onclick="alert('Battle Advice - Coming Soon')">
-          <div class="module-header">
-            <div class="module-icon">🎓</div>
-            <div class="module-title">Battle Advice</div>
-          </div>
-          <div class="module-desc">
-            Real-time tactical recommendations
-          </div>
-        </div>
-        
-        <div class="module-card" onclick="showProgress()">
-          <div class="module-header">
-            <div class="module-icon">📋</div>
-            <div class="module-title">Monthly Progress</div>
-          </div>
-          <div class="module-desc">
-            Track your improvement goals
-          </div>
-        </div>
-        
-      </div>
-      
-    </div>
-    
-  </div>
-  
-  <!-- TARGET ANALYSIS VIEW (SHOWS CATEGORY TILES) -->
-  <div id="targetAnalysisView" style="display: none;">
-    <button class="back-btn" onclick="showDashboard()">← Back to Command Center</button>
-    <h2 class="section-title">Target Analysis</h2>
-    
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 24px;">
-      
-      <div class="module-card" onclick="showCategory('safe')" style="border-left: 3px solid var(--amber);">
-        <div class="module-header">
-          <div class="module-icon">✓</div>
-          <div class="module-title">Safe Targets</div>
-        </div>
-        <div class="module-desc">FF < 1.8 | Easy wins, low respect but guaranteed</div>
-        <div class="module-stats">
-          <div class="module-stat">
-            <div class="label">Targets</div>
-            <div class="value" style="color: var(--amber);" id="safeCount">0</div>
-          </div>
-          <div class="module-stat">
-            <div class="label">Sim Hits</div>
-            <div class="value" style="color: var(--amber);" id="safeSim">0</div>
-          </div>
-        </div>
-        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);">
-          <div style="display: flex; justify-content: space-between; font-size: 11px;">
-            <span style="color: var(--text-dim);">Est. Resp</span>
-            <span style="font-weight: 700;" id="safeRespect">0</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px;">
-            <span style="color: var(--text-dim);">Avg/Hit</span>
-            <span style="font-weight: 700;" id="safeAvg">0</span>
-          </div>
-        </div>
-      </div>
+    <!-- TARGET CATEGORIES -->
+    <div class="section-title">Target Categories</div>
+    <div class="module-grid">
       
       <div class="module-card" onclick="showCategory('prime')" style="border-left: 3px solid var(--green);">
         <div class="module-header">
           <div class="module-icon">🎯</div>
           <div class="module-title">Prime Targets</div>
         </div>
-        <div class="module-desc">FF 1.8-4.2 | Optimal targets - beatable + good respect</div>
+        <div class="module-desc">
+          FF 1.8-4.2 | Beatable with 70%+ win rate | Optimal respect/energy
+        </div>
         <div class="module-stats">
           <div class="module-stat">
-            <div class="label">Targets</div>
+            <div class="label">Available</div>
             <div class="value" style="color: var(--green);" id="primeCount">0</div>
           </div>
           <div class="module-stat">
-            <div class="label">Sim Hits</div>
-            <div class="value" style="color: var(--green);" id="primeSim">0</div>
+            <div class="label">Respect</div>
+            <div class="value" style="color: var(--cyan);" id="primeRespect">0</div>
           </div>
         </div>
-        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);">
-          <div style="display: flex; justify-content: space-between; font-size: 11px;">
-            <span style="color: var(--text-dim);">Est. Resp</span>
-            <span style="font-weight: 700;" id="primeRespect">0</span>
+      </div>
+      
+      <div class="module-card" onclick="showCategory('safe')" style="border-left: 3px solid var(--amber);">
+        <div class="module-header">
+          <div class="module-icon">✓</div>
+          <div class="module-title">Safe Targets</div>
+        </div>
+        <div class="module-desc">
+          FF < 1.8 | Easy wins | Low respect but guaranteed
+        </div>
+        <div class="module-stats">
+          <div class="module-stat">
+            <div class="label">Available</div>
+            <div class="value" style="color: var(--amber);" id="safeCount">0</div>
           </div>
-          <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px;">
-            <span style="color: var(--text-dim);">Avg/Hit</span>
-            <span style="font-weight: 700;" id="primeAvg">0</span>
+          <div class="module-stat">
+            <div class="label">Respect</div>
+            <div class="value" style="color: var(--cyan);" id="safeRespect">0</div>
           </div>
         </div>
       </div>
@@ -798,53 +696,122 @@ function getHTML() {
           <div class="module-icon">⚠️</div>
           <div class="module-title">Risky Targets</div>
         </div>
-        <div class="module-desc">FF 4.2-5.2 | Challenging but high reward</div>
+        <div class="module-desc">
+          FF 4.2-5.2 | Challenging | High respect if you win
+        </div>
         <div class="module-stats">
           <div class="module-stat">
-            <div class="label">Targets</div>
+            <div class="label">Available</div>
             <div class="value" style="color: var(--blue);" id="riskyCount">0</div>
           </div>
           <div class="module-stat">
-            <div class="label">Sim Hits</div>
-            <div class="value" style="color: var(--blue);" id="riskySim">0</div>
-          </div>
-        </div>
-        <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);">
-          <div style="display: flex; justify-content: space-between; font-size: 11px;">
-            <span style="color: var(--text-dim);">Est. Resp</span>
-            <span style="font-weight: 700;" id="riskyRespect">0</span>
-          </div>
-          <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px;">
-            <span style="color: var(--text-dim);">Avg/Hit</span>
-            <span style="font-weight: 700;" id="riskyAvg">0</span>
+            <div class="label">Respect</div>
+            <div class="value" style="color: var(--cyan);" id="riskyRespect">0</div>
           </div>
         </div>
       </div>
       
-      <div class="module-card" onclick="showCategory('suicide')" style="border-left: 3px solid var(--red);">
+      <div class="module-card" onclick="showCategory('avoid')" style="border-left: 3px solid var(--red);">
         <div class="module-header">
           <div class="module-icon">🚫</div>
-          <div class="module-title">Suicide Targets</div>
+          <div class="module-title">Avoid Targets</div>
         </div>
-        <div class="module-desc">FF > 5.2 | Too strong, waste of energy</div>
+        <div class="module-desc">
+          FF > 5.2 | Too strong | Waste of energy
+        </div>
         <div class="module-stats">
           <div class="module-stat">
-            <div class="label">Targets</div>
-            <div class="value" style="color: var(--red);" id="suicideCount">0</div>
+            <div class="label">Count</div>
+            <div class="value" style="color: var(--red);" id="avoidCount">0</div>
           </div>
           <div class="module-stat">
-            <div class="label">Status</div>
-            <div class="value" style="font-size: 11px; color: var(--red);">NOT VIABLE</div>
+            <div class="label">Avg FF</div>
+            <div class="value" style="color: var(--red);" id="avoidAvgFF">0</div>
           </div>
         </div>
       </div>
       
     </div>
+    
+    <!-- TACTICAL TOOLS -->
+    <div class="section-title">Tactical Tools</div>
+    <div class="module-grid">
+      
+      <div class="module-card" onclick="showProgress()">
+        <div class="module-header">
+          <div class="module-icon">📋</div>
+          <div class="module-title">Monthly Progress</div>
+        </div>
+        <div class="module-desc">
+          Personalized tasks to improve your stats and combat effectiveness
+        </div>
+        <div class="module-stats">
+          <div class="module-stat">
+            <div class="label">Completed</div>
+            <div class="value" style="color: var(--green);" id="tasksCompleted">0</div>
+          </div>
+          <div class="module-stat">
+            <div class="label">Remaining</div>
+            <div class="value" style="color: var(--amber);" id="tasksRemaining">0</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="module-card" onclick="alert('War Timer - Coming Soon')">
+        <div class="module-header">
+          <div class="module-icon">⏱️</div>
+          <div class="module-title">War Timer</div>
+        </div>
+        <div class="module-desc">
+          Xanax countdown, energy tracker, optimal timing
+        </div>
+        <div class="module-stats">
+          <div class="module-stat">
+            <div class="label">Status</div>
+            <div class="value" style="font-size: 14px; color: var(--text-dim);">Soon</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="module-card" onclick="alert('Analytics - Coming Soon')">
+        <div class="module-header">
+          <div class="module-icon">📊</div>
+          <div class="module-title">War Analytics</div>
+        </div>
+        <div class="module-desc">
+          Respect breakdown, efficiency metrics, target distribution
+        </div>
+        <div class="module-stats">
+          <div class="module-stat">
+            <div class="label">Status</div>
+            <div class="value" style="font-size: 14px; color: var(--text-dim);">Soon</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="module-card" onclick="alert('Battle Advice - Coming Soon')">
+        <div class="module-header">
+          <div class="module-icon">🎓</div>
+          <div class="module-title">Battle Advice</div>
+        </div>
+        <div class="module-desc">
+          Real-time tactical recommendations based on current situation
+        </div>
+        <div class="module-stats">
+          <div class="module-stat">
+            <div class="label">Status</div>
+            <div class="value" style="font-size: 14px; color: var(--text-dim);">Soon</div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+    
   </div>
   
   <!-- TARGET CATEGORY DRILL-DOWN -->
-  <div id="categoryView" style="display: none;">
-    <button class="back-btn" onclick="showTargetAnalysis()">← Back to Target Analysis</button>
+  <div id="categoryView" class="drill-down">
+    <button class="back-btn" onclick="showDashboard()">← Back to Command Center</button>
     <h2 class="section-title" id="categoryTitle">Targets</h2>
     
     <div class="drill-layout">
@@ -964,9 +931,7 @@ async function initializeScan() {
     document.getElementById('dashboardView').style.display = 'block';
     
   } catch (error) {
-    console.error('Init error:', error);
-    console.error('Error stack:', error.stack);
-    document.getElementById('initStatus').innerHTML = '<div style="color: var(--red);">Error: ' + error.message + '</div>';
+    document.getElementById('initStatus').innerHTML = '<div style="color: var(--red);">Error loading data</div>';
   }
 }
 
@@ -991,7 +956,7 @@ async function processTargets(members) {
       const total = Number(sc.bs_estimate) || 0;
       
       const analysis = calculateWinProbability(SESSION.myTornStats, total, ff);
-      const respect = calculateRespect(total, ff, member.level);
+      const respect = calculateRespect(total, ff);
       
       let tier;
       if (ff < 1.8) tier = 'amber';
@@ -1043,20 +1008,9 @@ function calculateWinProbability(myStats, enemyStats, ff) {
   return { winChance, verdict, reasoning };
 }
 
-function calculateRespect(enemyTotal, ff, enemyLevel = 50) {
-  // Base respect from level (1.0 at level 1, 1.5 at level 100)
-  const levelRespect = 1.0 + ((enemyLevel - 1) / 100) * 0.5;
-  
-  // Apply FF multiplier
-  const baseRespect = levelRespect * ff;
-  
-  // War bonus (2x during ranked war)
-  const warRespect = baseRespect * 2;
-  
-  // Warlord weapon bonus (+16%)
-  const finalRespect = warRespect * 1.16;
-  
-  return Math.round(finalRespect * 10) / 10; // Round to 1 decimal
+function calculateRespect(enemyTotal, ff) {
+  const base = (enemyTotal / 100000000) * ff;
+  return Math.round(Math.min(Math.max(base, 1), 500));
 }
 
 function calculateStats() {
@@ -1070,93 +1024,29 @@ function calculateStats() {
 }
 
 function updateDashboard() {
-  // Populate member list
-  renderMemberList();
+  document.getElementById('totalMembers').textContent = SESSION.stats.total;
+  document.getElementById('beatableCount').textContent = SESSION.stats.beatable;
+  document.getElementById('totalRespect').textContent = formatStats(SESSION.stats.respect);
   
-  // Calculate war verdict
-  const beatable = SESSION.targets.filter(t => t.winChance >= 50);
-  const twentyHits = beatable.slice(0, 20).reduce((sum, t) => sum + t.respect, 0);
-  const wastedHits = SESSION.targets.filter(t => t.winChance < 50).length;
-  const avgResp = beatable.length > 0 ? (SESSION.stats.respect / beatable.length).toFixed(2) : 0;
+  const avgEff = SESSION.stats.beatable > 0 ? (SESSION.stats.respect / SESSION.stats.beatable / 25).toFixed(1) : 0;
+  document.getElementById('avgEfficiency').textContent = avgEff;
   
-  document.getElementById('twentyHitEst').textContent = twentyHits.toFixed(1);
-  document.getElementById('gapAnalysis').textContent = wastedHits;
-  document.getElementById('efficiencyScore').textContent = avgResp;
+  document.getElementById('primeCount').textContent = SESSION.stats.prime;
+  document.getElementById('safeCount').textContent = SESSION.stats.safe;
+  document.getElementById('riskyCount').textContent = SESSION.stats.risky;
+  document.getElementById('avoidCount').textContent = SESSION.stats.avoid;
   
-  // Set verdict
-  let verdict = 'GOOD RANK WAR';
-  let verdictDesc = 'Solid target pool with good respect potential';
-  let verdictColor = 'var(--green)';
+  const primeRespect = SESSION.targets.filter(t => t.tier === 'green' && t.winChance >= 50).reduce((s, t) => s + t.respect, 0);
+  const safeRespect = SESSION.targets.filter(t => t.tier === 'amber' && t.winChance >= 50).reduce((s, t) => s + t.respect, 0);
+  const riskyRespect = SESSION.targets.filter(t => t.tier === 'blue' && t.winChance >= 50).reduce((s, t) => s + t.respect, 0);
   
-  if (beatable.length < SESSION.stats.total * 0.3) {
-    verdict = 'POOR RANK WAR';
-    verdictDesc = 'Low beatable percentage - mathematically challenging';
-    verdictColor = 'var(--red)';
-  } else if (beatable.length > SESSION.stats.total * 0.7) {
-    verdict = 'EXCELLENT RANK WAR';
-    verdictDesc = 'High beatable percentage - favorable matchup';
-    verdictColor = 'var(--cyan)';
-  }
+  document.getElementById('primeRespect').textContent = formatStats(primeRespect);
+  document.getElementById('safeRespect').textContent = formatStats(safeRespect);
+  document.getElementById('riskyRespect').textContent = formatStats(riskyRespect);
   
-  document.getElementById('verdictText').textContent = verdict;
-  document.getElementById('verdictText').style.color = verdictColor;
-  document.getElementById('verdictDesc').textContent = verdictDesc;
-  
-  // Update category tiles
-  const safe = SESSION.targets.filter(t => t.tier === 'amber' && t.winChance >= 50);
-  const prime = SESSION.targets.filter(t => t.tier === 'green' && t.winChance >= 50);
-  const risky = SESSION.targets.filter(t => t.tier === 'blue' && t.winChance >= 50);
-  const suicide = SESSION.targets.filter(t => t.tier === 'red');
-  
-  document.getElementById('safeCount').textContent = safe.length;
-  document.getElementById('safeSim').textContent = Math.min(safe.length, 20);
-  document.getElementById('safeRespect').textContent = safe.reduce((s, t) => s + t.respect, 0).toFixed(1);
-  document.getElementById('safeAvg').textContent = safe.length > 0 ? (safe.reduce((s, t) => s + t.respect, 0) / safe.length).toFixed(2) : 0;
-  
-  document.getElementById('primeCount').textContent = prime.length;
-  document.getElementById('primeSim').textContent = Math.min(prime.length, 20);
-  document.getElementById('primeRespect').textContent = prime.reduce((s, t) => s + t.respect, 0).toFixed(1);
-  document.getElementById('primeAvg').textContent = prime.length > 0 ? (prime.reduce((s, t) => s + t.respect, 0) / prime.length).toFixed(2) : 0;
-  
-  document.getElementById('riskyCount').textContent = risky.length;
-  document.getElementById('riskySim').textContent = Math.min(risky.length, 20);
-  document.getElementById('riskyRespect').textContent = risky.reduce((s, t) => s + t.respect, 0).toFixed(1);
-  document.getElementById('riskyAvg').textContent = risky.length > 0 ? (risky.reduce((s, t) => s + t.respect, 0) / risky.length).toFixed(2) : 0;
-  
-  document.getElementById('suicideCount').textContent = suicide.length;
-  
-  document.getElementById('memberCount').textContent = SESSION.stats.total;
-  
-  // Update progress
-  const completed = SESSION.tasks.filter(t => t.completed).length;
-  document.getElementById('tasksCompleted').textContent = completed;
-  document.getElementById('tasksTotal').textContent = SESSION.tasks.length;
-  const percent = Math.round((completed / SESSION.tasks.length) * 100);
-  document.getElementById('progressBarMain').style.width = percent + '%';
-}
-
-function renderMemberList() {
-  const sorted = [...SESSION.targets].sort((a, b) => b.respect - a.respect);
-  
-  const html = sorted.map(t => {
-    const tierColors = { amber: 'var(--amber)', green: 'var(--green)', blue: 'var(--blue)', red: 'var(--red)' };
-    return \`
-      <div style="background: var(--panel); border: 1px solid var(--border); border-left: 3px solid \${tierColors[t.tier]}; padding: 10px 12px; border-radius: 6px; margin-bottom: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <div style="font-weight: 600; font-size: 13px;">\${t.name}</div>
-            <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Level \${t.level} • FF \${t.ff.toFixed(2)}x</div>
-          </div>
-          <div style="text-align: right;">
-            <div style="font-weight: 700; font-size: 14px; color: \${tierColors[t.tier]};">\${t.respect.toFixed(1)}</div>
-            <div style="font-size: 10px; color: var(--text-dim);">\${t.winChance}% win</div>
-          </div>
-        </div>
-      </div>
-    \`;
-  }).join('');
-  
-  document.getElementById('memberList').innerHTML = html;
+  const avoidTargets = SESSION.targets.filter(t => t.tier === 'red');
+  const avgAvoidFF = avoidTargets.length > 0 ? (avoidTargets.reduce((s, t) => s + t.ff, 0) / avoidTargets.length).toFixed(1) : 0;
+  document.getElementById('avoidAvgFF').textContent = avgAvoidFF + 'x';
 }
 
 function generateMonthlyTasks() {
@@ -1217,21 +1107,12 @@ function generateMonthlyTasks() {
 
 function showDashboard() {
   document.getElementById('dashboardView').style.display = 'block';
-  document.getElementById('targetAnalysisView').style.display = 'none';
-  document.getElementById('categoryView').style.display = 'none';
-  document.getElementById('progressView').style.display = 'none';
-}
-
-function showTargetAnalysis() {
-  document.getElementById('dashboardView').style.display = 'none';
-  document.getElementById('targetAnalysisView').style.display = 'block';
   document.getElementById('categoryView').style.display = 'none';
   document.getElementById('progressView').style.display = 'none';
 }
 
 function showCategory(tier) {
   document.getElementById('dashboardView').style.display = 'none';
-  document.getElementById('targetAnalysisView').style.display = 'none';
   document.getElementById('categoryView').style.display = 'block';
   document.getElementById('progressView').style.display = 'none';
   
@@ -1250,7 +1131,7 @@ function showCategory(tier) {
     tierColor = 'blue';
     filtered = SESSION.targets.filter(t => t.tier === 'blue');
   } else {
-    tierName = '🚫 Suicide Targets';
+    tierName = '🚫 Avoid Targets';
     tierColor = 'red';
     filtered = SESSION.targets.filter(t => t.tier === 'red');
   }
@@ -1267,8 +1148,8 @@ function showCategory(tier) {
       </div>
       <div class="target-meta">
         <span>Win: <strong style="color: var(--\${tierColor});">\${t.winChance}%</strong></span>
-        <span>Respect: <strong>\${t.respect.toFixed(1)}</strong></span>
-        <span>Level: <strong>\${t.level}</strong></span>
+        <span>Respect: <strong>\${t.respect}</strong></span>
+        <span>Verdict: <strong>\${t.verdict}</strong></span>
       </div>
     </div>
   \`).join('');
