@@ -955,14 +955,13 @@ async function initializeScan() {
     });
     const factionData = await factionRes.json();
     
+    document.getElementById('factionName').textContent = factionData.name;
+    
     await processTargets(factionData.members.filter(m => m.id !== uid));
     generateMonthlyTasks();
     
     document.getElementById('initScreen').style.display = 'none';
     document.getElementById('dashboardView').style.display = 'block';
-    
-    // Now update elements after dashboard is visible
-    document.getElementById('factionName').textContent = factionData.name;
     
   } catch (error) {
     console.error('Init error:', error);
