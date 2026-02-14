@@ -527,8 +527,7 @@ function getHTML() {
         <div style="font-weight: 600;"><span id="userName">-</span></div>
         <div style="color: var(--text-dim);">FF: <span style="color: var(--cyan); font-weight: 600;" id="userFF">-</span></div>
         <div style="color: var(--text-dim);">Scouter: <span style="color: var(--amber); font-weight: 600;" id="scouterStats">-</span></div>
-        <div style="color: var(--text-dim);">Torn: <span style="color: var(--green); font-weight: 600;" id="tornStats">-</span></div>
-        <div style="color: var(--text-dim);">Effective: <span style="color: var(--cyan); font-weight: 600;" id="effectiveStats">-</span></div>
+        <div style="color: var(--text-dim);">Effective: <span style="color: var(--green); font-weight: 600;" id="effectiveStats">-</span></div>
       </div>
       
       <!-- Main Grid -->
@@ -880,24 +879,20 @@ function getHTML() {
           body: JSON.stringify({ uid })
         });
         const userData = await userRes.json();
-        SESSION.myStats = userData.total;
-        SESSION.myTornStats = userData.total;
+        SESSION.myStats = userData.total; // Effective stats for calculations
         SESSION.userName = userData.name;
-        SESSION.userLevel = userData.level;
         
         // Get user's FF Scouter stats
         const userScouterRes = await fetch('/api/get-scouter-batch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            targets: [uid],
-            uid: uid
-          })
+          body: JSON.stringify({ targets: [uid], uid: uid })
         });
         const userScouterData = await userScouterRes.json();
-        const scouterInfo = (userScouterData.data || userScouterData || [])[0];
-        SESSION.myScouterStats = scouterInfo?.bs_estimate || userData.total;
-        SESSION.myFF = scouterInfo?.fair_fight || 1.0;
+        const scouterInfo = (userScouterData.data || userScouterData || [])[0] || {};
+        
+        SESSION.myScouterStats = scouterInfo.bs_estimate || 0;
+        SESSION.myFF = scouterInfo.fair_fight || 1.0;
         
         // Get faction
         const factionRes = await fetch('/api/get-faction', {
@@ -914,7 +909,7 @@ function getHTML() {
         document.getElementById('userName').textContent = SESSION.userName;
         document.getElementById('userFF').textContent = SESSION.myFF.toFixed(2) + 'x';
         document.getElementById('scouterStats').textContent = formatStats(SESSION.myScouterStats);
-        document.getElementById('tornStats').textContent = formatStats(SESSION.myTornStats);
+        document.getElementById('tornStats').textContent = formatStats(SESSION.myStats);
         document.getElementById('effectiveStats').textContent = formatStats(SESSION.myStats);
         document.getElementById('factionName').textContent = SESSION.factionName;
         
