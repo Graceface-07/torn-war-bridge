@@ -46,7 +46,16 @@ export default {
       const uid = body.uid;
       
       const res = await fetch(`https://api.torn.com/user/${uid}?selections=profile,battlestats&key=${SC_KEY}`);
+      
+      if (!res.ok) {
+        return jsonResponse({ error: 'Torn API error: ' + res.status }, {}, 500);
+      }
+      
       const data = await res.json();
+      
+      if (data.error) {
+        return jsonResponse({ error: data.error.error }, {}, 500);
+      }
       
       const modifiers = {
         strength: (data.strength_modifier || 0) + (data.strength_info?.[2] || 0),
