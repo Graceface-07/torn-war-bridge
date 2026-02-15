@@ -1,0 +1,32 @@
+### TACTICAL HUD: PROJECT STATUS & ROADMAP (V10.0)
+
+#### I. LAST KNOWN GOOD STATE (RECOVERY PROTOCOL)
+
+* **Active Project:** Discord-based Torn OC 2.0 Strategic Advisor.
+* **Operational Logic:** Sequential API v2 polling (Crimes + Inventory) with a 2.5s stagger to prevent connection resets.
+* **UI Style:** Tactical HUD (Deep charcoal, Teal/Amber accents, 0px border-radius).
+
+#### II. TECHNICAL OVERVIEW (COMPLETED)
+
+We have successfully transitioned from a flat "percentage check" to a dynamic advisor. Key milestones achieved:
+
+* **V2 API Integration:** Migration to the `user/crimes` and `user/inventory` endpoints, utilizing `checkpoint_pass_rate` as the primary success metric.
+* **Sequential Engine:** Implemented a non-parallel request flow to satisfy Torn’s strict V2 rate-limiting and prevent the `COMMUNICATION FAILURE` error.
+* **Data Normalization:** Resolved the `TypeError: .map is not a function` by implementing `Object.values()` logic to handle the V2 inventory dictionary structure.
+* **Strategic Mapping:** Linked the 10 OC levels to their specific 2.0 crime types (e.g., Level 5 → Digital Cracking) and assigned relative **Yield** and **Reward** values.
+
+#### III. CURRENT CAPABILITIES
+
+* **Dynamic Deployment:** Identifies the top 3 OCs where the user exceeds the 70% threshold.
+* **Inventory Verification:** Cross-references required OC kits (e.g., Slim Jim, Lockpicks) against the user's live inventory.
+* **Gap Analysis:** Calculates the exact percentage needed to unlock the next tier of OCs.
+* **Reward Weighting:** Classifies OCs by financial and respect potential (Low to Maximum).
+
+#### IV. STRATEGIC ROADMAP (NEXT STEPS)
+
+1. **Faction-Wide Integration:** Incorporating logic from the `BOW OC` script to monitor "Unfilled Slots" and "Missing Items" across the entire faction, rather than just individual stats.
+2. **Team Synergy Analysis:** Developing a "Slot Matcher" that recommends which faction members should occupy specific slots based on their individual `checkpoint_pass_rate`.
+3. **Real-time Webhooks:** Porting the summary logic to push automated alerts to Discord via the defined `DISCORD_WEBHOOK_URL` when an OC becomes 100% ready or falls below a success threshold.
+4. **Loot Table Deep-Dive:** Replacing the "~$1M+" placeholders with specific item drop probabilities (e.g., rare loot pools for "Ace in the Hole").
+
+**System is currently STABLE.** Ready for further instruction.
