@@ -1,15 +1,15 @@
-// =====================================================
-// OC 2.0 PERSONAL READINESS BOT — CLEAN UI EDITION
-// =====================================================
 // index.js
 // End-to-end OC 2.0 readiness using Torn v2: faction crimes + user skills
 
 import axios from 'axios';
 
 // ===== CONFIG =====
-const TORN_API_KEY = "rKP5EwA6DmSufqEm";   // ← paste your temporary key here
+const API_KEY = 'fiwzsFpv7BuGuTH3';   // ← paste your temporary key here
 const FACTION_ID = 42505;          // BoW - Hidden Shadows
-const BASE_URL = 'https://api.torn.com/v2';
+const BASE_URL = 'https://api.torn.com'; but the Pie St there's been 1. of the Council
+console.log("RUNNING FILE:", import.meta.url);
+console.log("USING API KEY:", API_KEY);
+
 
 // Role → primary crime skill stat
 const ROLE_SKILL_MAP = {
@@ -196,9 +196,9 @@ async function buildReadinessForFactionCrimes(targetUserIds = []) {
   return readinessResults;
 }
 
-// ===== CLI ENTRY =====
+// ===== CLI ENTRY (WINDOWS‑SAFE) =====
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && process.argv[1].toLowerCase().includes('index.js')) {
   const args = process.argv.slice(2).map(Number).filter(Boolean);
 
   buildReadinessForFactionCrimes(args)
