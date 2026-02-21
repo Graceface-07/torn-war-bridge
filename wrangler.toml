@@ -1,5 +1,5 @@
 name = "torn-war-bridge"
-main = "worker.js"
+main = "torn-war-bridge-worker.js"
 compatibility_date = "2024-01-01"
 
 [[kv_namespaces]]

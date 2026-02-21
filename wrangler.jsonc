@@ -1,5 +1,11 @@
-﻿{
-  "name": "warhub-kv-worker",
-  "main": "warhub-kv-worker.js",
-  "compatibility_date": "2025-01-01"
+{
+	"name": "torn-war-bridge",
+	"main": "warhub-kv-worker.js",
+	"compatibility_date": "2025-01-01",
+	"kv_namespaces": [
+		{
+			"id": "7d26ddc573674ba19db3af3951322bf7",
+			"binding": "ROTATOR"
+		}
+	]
 }
