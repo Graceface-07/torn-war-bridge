@@ -1,5 +1,5 @@
 ﻿{
-  "name": "warhub-kv-worker",
+  "name": "torn-war-bridge",
   "main": "warhub-kv-worker.js",
   "compatibility_date": "2025-01-01"
 }
