@@ -64,3 +64,44 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:
 #modalBody { background:#fff; min-width:340px; padding:22px 22px 36px 22px; border-radius:16px; box-shadow:var(--shadow); position:absolute; left:50%; top:12%; transform:translate(-50%,0);}
 .close { position:absolute; right:39px; top:12px; font-size:22px; color:#aaa; cursor:pointer; z-index:200;}
 .close:hover { color: #e74c3c;}
+
+/* Pagination Controls */
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-pagination {
+    padding: 8px 16px;
+    border: 1.5px solid var(--accent-color);
+    background: var(--card-bg);
+    color: var(--accent-color);
+    border-radius: 5px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-pagination:hover:not(:disabled) {
+    background: var(--accent-color);
+    color: #fff;
+}
+
+.btn-pagination:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: var(--border-color);
+    color: var(--border-color);
+}
+
+.page-indicator {
+    font-size: 0.95rem;
+    color: var(--secondary-color);
+    font-weight: 500;
+}
